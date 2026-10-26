@@ -35,6 +35,7 @@ const num = (x, d = 0) =>
 const fmtHora = new Intl.DateTimeFormat('es-EC', { timeZone: ZONA, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const fmtDia = new Intl.DateTimeFormat('es-EC', { timeZone: ZONA, weekday: 'short', day: 'numeric', month: 'short' });
 const horaCorta = (local) => local.slice(11, 16);
+const fmtDiaCorto = new Intl.DateTimeFormat('es-EC', { timeZone: ZONA, weekday: 'short', day: 'numeric' });
 
 function frase(pct) {
   if (pct < 20) return 'Sin lluvia esperada';
@@ -45,15 +46,26 @@ function frase(pct) {
 
 // ---------- series ----------
 
-/** Puntos reales de las últimas 24 h, terminando en la lectura de ahora. t en horas (0 = ahora). */
+// Rango de la gráfica: las horas de hoy desde la medianoche (al menos las últimas 6) y las 6 próximas.
+const PASADO_MIN_H = 6;
+const FUTURO_H = 6;
+
+/** {desde, hasta} en horas relativas a ahora (t = 0). */
+function rangoGrafica() {
+  const horaDelDia = Number(estado.actual.hora.slice(11, 13));
+  return { desde: -Math.max(PASADO_MIN_H, horaDelDia), hasta: FUTURO_H };
+}
+
+/** Puntos reales dentro del rango, terminando en la lectura de ahora. t en horas (0 = ahora). */
 function serieReal() {
   const { actual } = estado;
   const porHora = new Map();
   for (const f of estado.relleno) porHora.set(f.hora, f);
   for (const f of estado.historial) porHora.set(f.hora, f); // el historial oficial manda
+  const { desde } = rangoGrafica();
   const puntos = [...porHora.values()]
     .map((f) => ({ hora: f.hora, t: horasEntre(actual.hora, f.hora), y: f.probabilidad }))
-    .filter((p) => p.t < 0 && p.t >= -24)
+    .filter((p) => p.t < 0 && p.t >= desde)
     .sort((a, b) => a.t - b.t);
   puntos.push({ hora: actual.hora, t: 0, y: actual.probabilidad });
   return puntos;
@@ -62,7 +74,7 @@ function serieReal() {
 function serieProyeccion() {
   return estado.proyeccion
     .map((f) => ({ hora: f.hora, t: horasEntre(estado.actual.hora, f.hora), y: f.probabilidad }))
-    .filter((p) => p.t > 0 && p.t <= 12);
+    .filter((p) => p.t > 0 && p.t <= FUTURO_H);
 }
 
 /** Regresión sobre las últimas 6 horas reales (de t = −5 a t = 0). */
@@ -129,7 +141,9 @@ const M = { izq: 30, der: 8, arr: 18, aba: 36 };
 function dibujarGrafica(real, proy, tend) {
   const cont = $('grafica');
   const ancho = Math.max(280, cont.clientWidth || 320);
-  const x = (t) => M.izq + ((t + 24) / 36) * (ancho - M.izq - M.der);
+  const { desde, hasta } = rangoGrafica();
+  const x = (t) => M.izq + ((t - desde) / (hasta - desde)) * (ancho - M.izq - M.der);
+  const horaEn = (t) => sumarHoras(estado.actual.hora, t);
   const y = (v) => M.arr + (1 - v / 100) * (ALTO - M.arr - M.aba);
   const ruta = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.y).toFixed(1)}`).join('');
 
@@ -144,14 +158,25 @@ function dibujarGrafica(real, proy, tend) {
   partes.push(`<text class="ref-texto" x="${M.izq - 6}" y="${y(60) + 4}" text-anchor="end">60</text>`);
   partes.push(`<text x="${M.izq - 6}" y="${M.arr - 8}" text-anchor="end">%</text>`);
 
-  // Eje X: la hora del reloj cada 2 horas; «Ahora» va arriba para no tapar ninguna
-  for (let t = -24; t <= 12; t++) {
-    const h = Number(sumarHoras(estado.actual.hora, t).slice(11, 13));
-    if (h % 2 !== 0) continue;
+  // Eje X: la hora del reloj (cada hora si cabe, si no cada 2); «Ahora» va arriba para no tapar ninguna
+  const paso = hasta - desde <= 14 ? 1 : 2;
+  for (let t = desde; t <= hasta; t++) {
+    const h = Number(horaEn(t).slice(11, 13));
+    if (h % paso !== 0) continue;
     partes.push(`<line class="base" x1="${x(t)}" x2="${x(t)}" y1="${ALTO - M.aba}" y2="${ALTO - M.aba + 4}"/>`);
     partes.push(`<text x="${x(t)}" y="${ALTO - M.aba + 16}" text-anchor="middle">${h}</text>`);
   }
   partes.push(`<text x="${ancho - M.der}" y="${ALTO - 2}" text-anchor="end">hora del día</text>`);
+
+  // Cambio de día: línea en la medianoche y el nombre de cada día a su lado
+  for (let t = desde + 1; t < hasta; t++) {
+    if (horaEn(t).slice(11, 13) !== '00') continue;
+    const xm = x(t);
+    const dia = (k) => fmtDiaCorto.format(aFecha(horaEn(k)));
+    partes.push(`<line class="dia" x1="${xm}" x2="${xm}" y1="${M.arr}" y2="${ALTO - M.aba}"/>`);
+    partes.push(`<text class="dia-texto" x="${xm - 5}" y="${M.arr + 12}" text-anchor="end">${dia(t - 1)}</text>`);
+    partes.push(`<text class="dia-texto" x="${xm + 5}" y="${M.arr + 12}" text-anchor="start">${dia(t)}</text>`);
+  }
   partes.push(`<line class="linea-ahora" x1="${x(0)}" x2="${x(0)}" y1="${M.arr}" y2="${ALTO - M.aba}"/>`);
   partes.push(`<text x="${x(0)}" y="${M.arr - 6}" text-anchor="middle" style="fill:var(--texto-2);font-weight:600">Ahora</text>`);
 
@@ -182,7 +207,7 @@ function dibujarGrafica(real, proy, tend) {
   partes.push(`<g id="hover" visibility="hidden"><line class="cruz" y1="${M.arr}" y2="${ALTO - M.aba}"/><circle class="marca" r="4"/></g>`);
 
   const resumen = `Probabilidad de lluvia por hora: ahora ${Math.round(ahora.y)} %` +
-    (proy.length ? `, en 12 horas ${Math.round(proy[proy.length - 1].y)} %` : '');
+    (proy.length ? `, en ${FUTURO_H} horas ${Math.round(proy[proy.length - 1].y)} %` : '');
   cont.innerHTML =
     `<svg viewBox="0 0 ${ancho} ${ALTO}" width="${ancho}" height="${ALTO}" role="img" aria-label="${resumen}">${partes.join('')}</svg>` +
     '<div class="globo" hidden></div>';
