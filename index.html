@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Probabilidad de lluvia en Guayaquil, hora a hora, con su tendencia.">
+  <title>Lluvia en Fondo de Bikini</title>
+  <link rel="stylesheet" href="assets/estilos.css">
+  <script type="module" src="assets/app.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Lluvia en Fondo de Bikini</h1>
+    </header>
+
+    <section class="principal" aria-live="polite">
+      <p class="etiqueta" id="etiqueta">Probabilidad de lluvia</p>
+      <p class="prob" id="prob">—</p>
+      <p class="frase" id="frase">Cargando…</p>
+      <p class="proximas" id="proximas" hidden></p>
+      <p class="proximas" id="aeropuerto" hidden></p>
+    </section>
+
+    <div class="aviso" id="aviso" role="alert" hidden></div>
+
+    <section class="datos" aria-label="Condiciones actuales">
+      <div class="dato"><span class="valor" id="temp">—</span><span class="nombre">Temperatura</span></div>
+      <div class="dato"><span class="valor" id="hum">—</span><span class="nombre">Humedad</span></div>
+      <div class="dato"><span class="valor" id="pres">—</span><span class="nombre">Presión</span></div>
+    </section>
+
+    <section class="lectura">
+      <p id="hora-lectura" class="hora-lectura">—</p>
+      <button type="button" id="actualizar">Actualizar ahora</button>
+      <p id="estado" class="estado" role="status"></p>
+    </section>
+
+    <section class="grafica">
+      <h2>Probabilidad por hora</h2>
+      <ul class="leyenda">
+        <li><span class="muestra pasado"></span>Últimas 24 h</li>
+        <li><span class="muestra proyeccion"></span>Próximas 12 h</li>
+        <li><span class="muestra tendencia"></span>Tendencia</li>
+      </ul>
+      <div id="grafica" class="lienzo"></div>
+    </section>
+
+    <section id="debug" class="debug" hidden></section>
+
+    <footer>
+      Datos del clima: <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0).
+    </footer>
+  </main>
+</body>
+</html>

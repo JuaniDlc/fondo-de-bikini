@@ -1,0 +1,185 @@
+{
+  "generado": "2026-10-26T04:46:04.247Z",
+  "hora": "2026-10-25T23:00",
+  "probabilidad": 48.4,
+  "fuente": "corregido",
+  "corregido": 48.4,
+  "ensamble": 97.1,
+  "heuristica": 13.4,
+  "temperatura": 25.3,
+  "humedad": 96,
+  "presion": 1012.2,
+  "detalle": {
+    "base": 0.05,
+    "lluviosa": false,
+    "td": 24.615161902404793,
+    "sp": 0.6848380975952075,
+    "cambioEsperado": 0.4392304845413262,
+    "anomalia": 1.5607695154586738,
+    "z": -1.8657924967566222,
+    "factores": {
+      "temporada": -1.8458266904983305,
+      "margen": 1.823339046322636,
+      "humedad": 0.96,
+      "tendencia": -1.4046925639128065,
+      "presion": -0.30000000000001137,
+      "conveccion": 0
+    }
+  },
+  "momento": "2026-10-25T23:45",
+  "presion3h": 1010.2,
+  "proximas6h": 53.1,
+  "proximas6hFuente": "corregido",
+  "usaAeropuerto": true,
+  "aeropuerto": {
+    "hora": "2026-10-25T23:00",
+    "lluvia_ahora": 0,
+    "lluvia_3h": 0,
+    "reportes": 5
+  },
+  "ensamble6h": 98,
+  "modelos": {
+    "ahora": {
+      "ecmwf": 94.1,
+      "gfs": 100
+    },
+    "proximas6h": {
+      "ecmwf": 96.1,
+      "gfs": 100
+    }
+  },
+  "proyeccion": [
+    {
+      "hora": "2026-10-26T00:00",
+      "probabilidad": 48.6,
+      "fuente": "corregido",
+      "corregido": 48.6,
+      "ensamble": 97.1,
+      "heuristica": 27.2,
+      "temperatura": 25.3,
+      "humedad": 96,
+      "presion": 1012
+    },
+    {
+      "hora": "2026-10-26T01:00",
+      "probabilidad": 43.4,
+      "fuente": "corregido",
+      "corregido": 43.4,
+      "ensamble": 97.1,
+      "heuristica": 58.8,
+      "temperatura": 25.2,
+      "humedad": 96,
+      "presion": 1011.1
+    },
+    {
+      "hora": "2026-10-26T02:00",
+      "probabilidad": 51.6,
+      "fuente": "corregido",
+      "corregido": 51.6,
+      "ensamble": 92.5,
+      "heuristica": 68.2,
+      "temperatura": 25.3,
+      "humedad": 96,
+      "presion": 1010.4
+    },
+    {
+      "hora": "2026-10-26T03:00",
+      "probabilidad": 51.7,
+      "fuente": "corregido",
+      "corregido": 51.7,
+      "ensamble": 92.5,
+      "heuristica": 39.4,
+      "temperatura": 25.2,
+      "humedad": 95,
+      "presion": 1010.6
+    },
+    {
+      "hora": "2026-10-26T04:00",
+      "probabilidad": 53.9,
+      "fuente": "corregido",
+      "corregido": 53.9,
+      "ensamble": 92.5,
+      "heuristica": 27.6,
+      "temperatura": 25.2,
+      "humedad": 95,
+      "presion": 1010.7
+    },
+    {
+      "hora": "2026-10-26T05:00",
+      "probabilidad": 45.4,
+      "fuente": "corregido",
+      "corregido": 45.4,
+      "ensamble": 76.8,
+      "heuristica": 25.1,
+      "temperatura": 25,
+      "humedad": 96,
+      "presion": 1011
+    },
+    {
+      "hora": "2026-10-26T06:00",
+      "probabilidad": 34.1,
+      "fuente": "corregido",
+      "corregido": 34.1,
+      "ensamble": 76.8,
+      "heuristica": 36.3,
+      "temperatura": 24.9,
+      "humedad": 97,
+      "presion": 1011.5
+    },
+    {
+      "hora": "2026-10-26T07:00",
+      "probabilidad": 46.7,
+      "fuente": "corregido",
+      "corregido": 46.7,
+      "ensamble": 76.8,
+      "heuristica": 26,
+      "temperatura": 25.4,
+      "humedad": 94,
+      "presion": 1012.2
+    },
+    {
+      "hora": "2026-10-26T08:00",
+      "probabilidad": 33.2,
+      "fuente": "corregido",
+      "corregido": 33.2,
+      "ensamble": 81.1,
+      "heuristica": 6.2,
+      "temperatura": 26.6,
+      "humedad": 86,
+      "presion": 1013.1
+    },
+    {
+      "hora": "2026-10-26T09:00",
+      "probabilidad": 32.1,
+      "fuente": "corregido",
+      "corregido": 32.1,
+      "ensamble": 81.1,
+      "heuristica": 1,
+      "temperatura": 28.4,
+      "humedad": 76,
+      "presion": 1013.6
+    },
+    {
+      "hora": "2026-10-26T10:00",
+      "probabilidad": 23,
+      "fuente": "corregido",
+      "corregido": 23,
+      "ensamble": 81.1,
+      "heuristica": 0.3,
+      "temperatura": 29.8,
+      "humedad": 69,
+      "presion": 1013.6
+    },
+    {
+      "hora": "2026-10-26T11:00",
+      "probabilidad": 5.3,
+      "fuente": "corregido",
+      "corregido": 5.3,
+      "ensamble": 88.9,
+      "heuristica": 0.2,
+      "temperatura": 31.3,
+      "humedad": 62,
+      "presion": 1013.2
+    }
+  ]
+}

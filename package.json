@@ -1,0 +1,13 @@
+{
+  "name": "lluvia-guayaquil",
+  "private": true,
+  "type": "module",
+  "description": "Probabilidad de lluvia en Guayaquil, hora a hora",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "actualizar": "node scripts/actualizar.mjs"
+  }
+}

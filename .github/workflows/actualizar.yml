@@ -1,0 +1,43 @@
+name: Actualizar lectura
+
+on:
+  schedule:
+    - cron: '7 * * * *' # cada hora al minuto 7 (UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar-datos
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Pruebas del modelo
+        run: node --test
+
+      - name: Consultar y calcular
+        run: node scripts/actualizar.mjs
+
+      - name: Commit si hay cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+            exit 0
+          fi
+          git commit -m "Lectura $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
+          git pull --rebase
+          git push
