@@ -29,9 +29,13 @@ const actual = await leerJSON('actual.json', null);
 const rayos = await leerJSON('rayos.json', null);
 const { mensajes, estado: nuevo } = decidir(estado, actual, rayos);
 
+let entregados = 0;
 for (const m of mensajes) {
   console.log(`Aviso: ${m}`);
-  await enviarWhatsApp(m);
+  entregados += await enviarWhatsApp(m);
 }
 if (!mensajes.length) console.log('Sin avisos nuevos.');
-await writeFile(new URL('alertas.json', carpeta), `${JSON.stringify(nuevo, null, 2)}\n`);
+// Si había avisos y no llegó ninguno (sin destinatarios o CallMeBot falló), no se marcan como
+// enviados: se reintenta en la próxima ejecución.
+const guardar = mensajes.length && entregados === 0 ? estado : nuevo;
+await writeFile(new URL('alertas.json', carpeta), `${JSON.stringify(guardar, null, 2)}\n`);
