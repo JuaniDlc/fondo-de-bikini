@@ -44,8 +44,8 @@ A partir de ahí el workflow corre solo cada hora (minuto 7, en UTC).
 
 Dos avisos, publicados en un canal de Telegram y, si está configurado, enviados por WhatsApp con [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/):
 
-- **Lluvia** (workflow «Actualizar lectura», cada hora): cuando el modelo corregido da ≥ 80 % de lluvia en las próximas 6 horas. No se repite hasta que la probabilidad baje de 60 %.
-- **Rayos** (workflow «Rayos», cada 10 minutos): cuando el satélite GOES-19 ve al menos 3 rayos a menos de 60 km de Guayaquil en los últimos 10 minutos (`scripts/rayos.py`). Avisa otra vez si la tormenta se acerca a menos de 25 km; si no, como mucho uno por hora.
+- **Lluvia** (workflow «Actualizar lectura», cada hora): cuando el modelo corregido da ≥ 80 % de lluvia en las próximas 6 horas. Cuando baja de 60 %, avisa que bajó el riesgo; solo entonces puede volver a avisar.
+- **Rayos** (workflow «Rayos», cada 10 minutos): cuando el satélite GOES-19 ve al menos 3 rayos a menos de 60 km de Guayaquil en los últimos 10 minutos (`scripts/rayos.py`). Avisa otra vez si la tormenta se acerca a menos de 25 km; si no, como mucho uno por hora. Si avisó, avisa también cuando lleva 30 minutos sin rayos cerca.
 
 La lógica está en `scripts/alertas.mjs` y el estado (qué avisos están activos) en `data/alertas.json`.
 

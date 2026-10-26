@@ -1,16 +1,18 @@
-// Decide cuándo mandar un aviso por WhatsApp, sin repetir el mismo aviso una y otra vez.
+// Decide cuándo mandar un aviso (Telegram, WhatsApp), sin repetir el mismo aviso una y otra vez.
 //
-// Dos avisos independientes:
-// - lluvia: el modelo corregido da ≥ 80 % de lluvia en las próximas 6 horas. Se vuelve a
-//   avisar solo después de que baje de 60 % (así no llega un mensaje cada hora).
+// Dos avisos independientes, cada uno con su mensaje de cierre:
+// - lluvia: el modelo corregido da ≥ 80 % de lluvia en las próximas 6 horas. Cuando baja de
+//   60 %, avisa que bajó el riesgo y se rearma (así no llega un mensaje cada hora).
 // - rayos: el satélite ve una tormenta eléctrica a menos de 60 km. Avisa al aparecer y si se
-//   acerca a menos de 25 km; como mucho un aviso de rayos por hora.
+//   acerca a menos de 25 km; como mucho un aviso de rayos por hora. Si avisó, avisa también
+//   cuando lleva 30 minutos sin rayos cerca.
 
 export const PAGINA = 'https://juanidlc.github.io/fondo-de-bikini/';
 export const LLUVIA_ACTIVA = 80;
 export const LLUVIA_DESACTIVA = 60;
 export const RAYOS_MINIMOS = 3; // menos que esto puede ser ruido del sensor
 export const ESPERA_RAYOS_MIN = 60;
+export const SIN_RAYOS_MIN = 30; // sin rayos este tiempo = la tormenta se alejó
 const VIGENCIA_ACTUAL_MIN = 120;
 const VIGENCIA_RAYOS_MIN = 20;
 
@@ -21,7 +23,10 @@ const nivelRayos = (r) => {
 };
 
 export function estadoInicial() {
-  return { lluvia: { activa: false, enviado: null }, rayos: { nivel: 0, enviado: null } };
+  return {
+    lluvia: { activa: false, enviado: null },
+    rayos: { nivel: 0, enviado: null, avisada: false, ultimoRayo: null },
+  };
 }
 
 /**
@@ -44,18 +49,27 @@ export function decidir(estado, actual, rayos, ahora = Date.now()) {
       mensajes.push(mensajeLluvia(p6, actual));
     } else if (nuevo.lluvia.activa && p6 < LLUVIA_DESACTIVA) {
       nuevo.lluvia.activa = false;
+      mensajes.push(mensajeLluviaFin(p6));
     }
   }
 
   // Rayos (solo con una lectura reciente del satélite)
   if (rayos?.generado && minutosDesde(rayos.generado, ahora) <= VIGENCIA_RAYOS_MIN) {
+    const r = nuevo.rayos;
+    r.avisada ??= r.nivel > 0; // estados guardados antes de que existiera el aviso de cierre
     const nivel = nivelRayos(rayos);
-    const esperaCumplida = !nuevo.rayos.enviado || minutosDesde(nuevo.rayos.enviado, ahora) >= ESPERA_RAYOS_MIN;
-    if (nivel > nuevo.rayos.nivel && (esperaCumplida || nivel === 2)) {
-      nuevo.rayos = { nivel, enviado: new Date(ahora).toISOString() };
+    if (nivel > 0) r.ultimoRayo = rayos.generado;
+    const esperaCumplida = !r.enviado || minutosDesde(r.enviado, ahora) >= ESPERA_RAYOS_MIN;
+    if (nivel > r.nivel && (esperaCumplida || nivel === 2)) {
+      Object.assign(r, { nivel, enviado: new Date(ahora).toISOString(), avisada: true });
       mensajes.push(mensajeRayos(rayos));
     } else if (nivel === 0) {
-      nuevo.rayos.nivel = 0;
+      r.nivel = 0;
+      const ultimo = r.ultimoRayo ?? r.enviado;
+      if (r.avisada && ultimo && minutosDesde(ultimo, ahora) >= SIN_RAYOS_MIN) {
+        r.avisada = false;
+        mensajes.push(mensajeRayosFin());
+      }
     }
   }
 
@@ -66,6 +80,16 @@ export function mensajeLluvia(p6, actual) {
   const aero = actual?.aeropuerto?.lluvia_ahora === 1 ? ' Ya está lloviendo en el aeropuerto.' : '';
   return `🌧️ Lluvia en Fondo de Bikini: ${Math.round(p6)} % de probabilidad de lluvia en Guayaquil `
     + `en las próximas 6 horas.${aero} Lleva paraguas. ${PAGINA}`;
+}
+
+export function mensajeLluviaFin(p6) {
+  return `✅ Bajó el riesgo de lluvia en Guayaquil: ahora ${Math.round(p6)} % de probabilidad `
+    + `en las próximas 6 horas. ${PAGINA}`;
+}
+
+export function mensajeRayosFin() {
+  return `✅ La tormenta eléctrica se alejó de Guayaquil: no hay rayos a menos de 60 km desde hace `
+    + `${SIN_RAYOS_MIN} minutos. ${PAGINA}`;
 }
 
 export function mensajeRayos(r) {

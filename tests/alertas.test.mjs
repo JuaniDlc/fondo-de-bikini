@@ -20,8 +20,12 @@ test('lluvia: avisa al llegar a 80 %, no repite, y rearma bajo 60 %', () => {
   assert.equal(r.mensajes.length, 0);
   r = decidir(r.estado, actual(70, min(180)), null, min(180)); // entre 60 y 80: sigue activa
   assert.equal(r.estado.lluvia.activa, true);
-  r = decidir(r.estado, actual(40, min(240)), null, min(240)); // bajó: se rearma
+  r = decidir(r.estado, actual(40, min(240)), null, min(240)); // bajó: avisa y se rearma
   assert.equal(r.estado.lluvia.activa, false);
+  assert.equal(r.mensajes.length, 1);
+  assert.match(r.mensajes[0], /Bajó el riesgo de lluvia.*40 %/);
+  r = decidir(r.estado, actual(30, min(270)), null, min(270)); // sigue bajo: no repite el cierre
+  assert.equal(r.mensajes.length, 0);
   r = decidir(r.estado, actual(82, min(300)), null, min(300));
   assert.equal(r.mensajes.length, 1);
 });
@@ -49,6 +53,49 @@ test('rayos: avisa al aparecer y al acercarse, como mucho uno por hora', () => {
   assert.equal(r.mensajes.length, 0);
   r = decidir(r.estado, null, rayos(50, 50, min(95)), min(95));
   assert.equal(r.mensajes.length, 1);
+});
+
+test('lluvia: sin aviso previo, bajar de 60 % no manda nada', () => {
+  assert.equal(decidir(estadoInicial(), actual(20), null, T0).mensajes.length, 0);
+});
+
+test('rayos: avisa que la tormenta se alejó tras 30 minutos sin rayos', () => {
+  let r = decidir(estadoInicial(), null, rayos(100, 40), T0);
+  assert.equal(r.mensajes.length, 1);
+  r = decidir(r.estado, null, rayos(80, 45, min(10)), min(10));
+  r = decidir(r.estado, null, rayos(0, null, min(20)), min(20)); // 10 min sin rayos: espera
+  assert.equal(r.mensajes.length, 0);
+  r = decidir(r.estado, null, rayos(0, null, min(30)), min(30));
+  assert.equal(r.mensajes.length, 0);
+  r = decidir(r.estado, null, rayos(0, null, min(40)), min(40)); // 30 min desde el último rayo
+  assert.equal(r.mensajes.length, 1);
+  assert.match(r.mensajes[0], /se alejó/);
+  r = decidir(r.estado, null, rayos(0, null, min(50)), min(50)); // no repite el cierre
+  assert.equal(r.mensajes.length, 0);
+});
+
+test('rayos: si vuelve antes de 30 minutos, no avisa que se alejó', () => {
+  let r = decidir(estadoInicial(), null, rayos(100, 40), T0);
+  r = decidir(r.estado, null, rayos(0, null, min(10)), min(10));
+  r = decidir(r.estado, null, rayos(0, null, min(20)), min(20));
+  r = decidir(r.estado, null, rayos(30, 50, min(30)), min(30)); // volvió (sin repetir aviso: < 1 h)
+  assert.equal(r.mensajes.length, 0);
+  r = decidir(r.estado, null, rayos(0, null, min(50)), min(50)); // 20 min desde el último rayo
+  assert.equal(r.mensajes.length, 0);
+  r = decidir(r.estado, null, rayos(0, null, min(60)), min(60));
+  assert.match(r.mensajes[0], /se alejó/);
+});
+
+test('rayos: sin aviso previo no manda «se alejó»', () => {
+  let r = decidir(estadoInicial(), null, rayos(2, 40), T0); // muy pocos: no avisó
+  r = decidir(r.estado, null, rayos(0, null, min(60)), min(60));
+  assert.equal(r.mensajes.length, 0);
+});
+
+test('rayos: estado guardado antes de existir el cierre (sin «avisada»)', () => {
+  const viejo = { lluvia: { activa: false, enviado: null }, rayos: { nivel: 2, enviado: iso(T0) } };
+  const r = decidir(viejo, null, rayos(0, null, min(40)), min(40));
+  assert.match(r.mensajes[0], /se alejó/);
 });
 
 test('rayos: ignora datos del satélite de hace más de 20 minutos', () => {
