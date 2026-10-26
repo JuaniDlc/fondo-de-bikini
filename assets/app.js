@@ -6,7 +6,7 @@ import {
 } from './openmeteo.js';
 
 const ESPERA_BOTON_S = 60;
-const VIGENCIA_MIN = 15; // datos más viejos que esto se recalculan solos al abrir o volver a la página
+const VIGENCIA_MIN = 10; // con la página abierta, datos más viejos que esto se recalculan solos
 // Umbrales sobre la probabilidad de lluvia en las próximas 6 horas. En la evaluación de
 // analisis/resultados.md, cuando el modelo con el reporte del aeropuerto dijo ≥ 80 %,
 // llovió el 87 % de las veces.
@@ -109,14 +109,13 @@ function dibujar() {
     aviso.innerHTML = '<strong>Atención:</strong> es posible que llueva en las próximas horas. Ten el paraguas a mano.';
   }
 
-  // Hora de la lectura
-  const momento = aFecha(actual.momento ?? actual.hora);
-  const esHoy = fmtDia.format(momento) === fmtDia.format(new Date());
-  let lectura = `Última lectura: ${fmtHora.format(momento)} · ${esHoy ? 'hoy' : fmtDia.format(momento)}`;
-  if (estado.generado && Date.now() - Date.parse(estado.generado) > 2 * 3600e3) {
-    lectura += ' · la lectura automática está atrasada';
-  }
-  $('hora-lectura').textContent = lectura;
+  // Cuándo se calcularon los datos en pantalla y de qué hora es el dato del clima
+  const calculado = estado.obtenido ? new Date(estado.obtenido) : aFecha(actual.momento ?? actual.hora);
+  const clima = aFecha(actual.momento ?? actual.hora);
+  const esHoy = fmtDia.format(calculado) === fmtDia.format(new Date());
+  $('hora-lectura').textContent =
+    `Actualizado a las ${fmtHora.format(calculado)} · ${esHoy ? 'hoy' : fmtDia.format(calculado)}`
+    + ` (clima de las ${fmtHora.format(clima)})`;
 
   dibujarGrafica(real, serieProyeccion(), tend);
   if (debug) dibujarDebug();
@@ -290,7 +289,7 @@ async function actualizarAhora({ automatico = false } = {}) {
   const msg = $('estado');
   boton.disabled = true;
   msg.classList.remove('error');
-  msg.textContent = 'Consultando el clima…';
+  msg.textContent = 'Actualizando con el clima de este momento…';
   try {
     // El reporte del aeropuerto solo lo puede leer el workflow; si es de esta hora, se reutiliza.
     const datos = procesarRespuesta(await consultarOpenMeteo(), {
@@ -303,7 +302,7 @@ async function actualizarAhora({ automatico = false } = {}) {
     estado.generado = null;
     estado.obtenido = Date.now();
     dibujar();
-    msg.textContent = `Actualizado a las ${fmtHora.format(new Date())}`;
+    msg.textContent = ''; // la hora de actualización ya se ve arriba del botón
   } catch (e) {
     console.error(e);
     msg.classList.add('error');
@@ -317,10 +316,13 @@ async function actualizarAhora({ automatico = false } = {}) {
   }
 }
 
-/** Si los datos en pantalla tienen más de VIGENCIA_MIN minutos, los recalcula con el clima de ahora. */
+/**
+ * Recalcula con el clima de ahora: siempre al abrir la página; después, al volver a la pestaña
+ * o cada minuto que pase con ella a la vista, si los datos tienen más de VIGENCIA_MIN minutos.
+ */
 function refrescarSiHaceFalta({ alAbrir = false } = {}) {
-  // Al abrir siempre; después, solo mientras la pestaña esté a la vista.
-  if (!alAbrir && document.visibilityState !== 'visible') return;
+  if (alAbrir) return actualizarAhora({ automatico: true });
+  if (document.visibilityState !== 'visible') return;
   if (!estado.obtenido || Date.now() - estado.obtenido > VIGENCIA_MIN * 60000) {
     actualizarAhora({ automatico: true });
   }
@@ -356,8 +358,10 @@ async function iniciar() {
     estado.obtenido = generado ? Date.parse(generado) : null;
     dibujar(); // se muestra de inmediato lo guardado…
   }
-  // …y si es de hace más de 15 minutos (o no hay nada), se recalcula con el clima de este momento.
+  // …y enseguida se recalcula con el clima de este momento.
   refrescarSiHaceFalta({ alAbrir: true });
+  // El celular puede «reabrir» la página desde su memoria sin cargarla de nuevo.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) refrescarSiHaceFalta({ alAbrir: true }); });
   document.addEventListener('visibilitychange', () => refrescarSiHaceFalta());
   setInterval(() => refrescarSiHaceFalta(), 60000);
 
