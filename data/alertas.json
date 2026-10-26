@@ -1,0 +1,10 @@
+{
+  "lluvia": {
+    "activa": false,
+    "enviado": null
+  },
+  "rayos": {
+    "nivel": 0,
+    "enviado": null
+  }
+}
