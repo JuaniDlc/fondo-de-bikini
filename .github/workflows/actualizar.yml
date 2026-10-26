@@ -29,6 +29,11 @@ jobs:
       - name: Consultar y calcular
         run: node scripts/actualizar.mjs
 
+      - name: Avisar por WhatsApp
+        env:
+          CALLMEBOT_DESTINOS: ${{ secrets.CALLMEBOT_DESTINOS }}
+        run: node scripts/avisar.mjs
+
       - name: Commit si hay cambios
         run: |
           git config user.name "github-actions[bot]"
@@ -39,5 +44,5 @@ jobs:
             exit 0
           fi
           git commit -m "Lectura $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
-          git pull --rebase
-          git push
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1

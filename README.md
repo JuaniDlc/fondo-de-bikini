@@ -40,6 +40,21 @@ A partir de ahí el workflow corre solo cada hora (minuto 7, en UTC).
 
 **Límites de GitHub:** las ejecuciones programadas pueden atrasarse varios minutos en horas de mucha carga, y GitHub pausa los workflows programados de un repo público tras unos 60 días sin actividad. Si pasa, entra a **Actions** y pulsa **Enable workflow**. La página avisa «la lectura automática está atrasada» cuando los datos tienen más de 2 horas.
 
+## Avisos por WhatsApp
+
+Dos avisos, enviados con [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/):
+
+- **Lluvia** (workflow «Actualizar lectura», cada hora): cuando el modelo corregido da ≥ 80 % de lluvia en las próximas 6 horas. No se repite hasta que la probabilidad baje de 60 %.
+- **Rayos** (workflow «Rayos», cada 10 minutos): cuando el satélite GOES-19 ve al menos 3 rayos a menos de 60 km de Guayaquil en los últimos 10 minutos (`scripts/rayos.py`). Avisa otra vez si la tormenta se acerca a menos de 25 km; si no, como mucho uno por hora.
+
+La lógica está en `scripts/alertas.mjs` y el estado (qué avisos están activos) en `data/alertas.json`.
+
+**Configurar destinatarios:**
+
+1. Cada persona que quiera recibir los avisos activa CallMeBot desde su WhatsApp siguiendo las instrucciones de su página, y recibe una clave (apikey).
+2. En el repositorio, **Settings → Secrets and variables → Actions → New repository secret**, nombre `CALLMEBOT_DESTINOS`, valor con el formato `+593XXXXXXXXX:clave` (varios separados por `;`). Nunca pongas números ni claves en el código.
+3. En **Actions → Probar WhatsApp → Run workflow** se envía un mensaje de prueba.
+
 ## En local
 
 Necesitas Node 20 o superior.
