@@ -29,9 +29,11 @@ jobs:
       - name: Consultar y calcular
         run: node scripts/actualizar.mjs
 
-      - name: Avisar por WhatsApp
+      - name: Avisar por Telegram y WhatsApp
         env:
           CALLMEBOT_DESTINOS: ${{ secrets.CALLMEBOT_DESTINOS }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
         run: node scripts/avisar.mjs
 
       - name: Commit si hay cambios

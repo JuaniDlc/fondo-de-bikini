@@ -42,18 +42,26 @@ A partir de ahí el workflow corre solo cada hora (minuto 7, en UTC).
 
 ## Avisos por WhatsApp
 
-Dos avisos, enviados con [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/):
+Dos avisos, publicados en un canal de Telegram y, si está configurado, enviados por WhatsApp con [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/):
 
 - **Lluvia** (workflow «Actualizar lectura», cada hora): cuando el modelo corregido da ≥ 80 % de lluvia en las próximas 6 horas. No se repite hasta que la probabilidad baje de 60 %.
 - **Rayos** (workflow «Rayos», cada 10 minutos): cuando el satélite GOES-19 ve al menos 3 rayos a menos de 60 km de Guayaquil en los últimos 10 minutos (`scripts/rayos.py`). Avisa otra vez si la tormenta se acerca a menos de 25 km; si no, como mucho uno por hora.
 
 La lógica está en `scripts/alertas.mjs` y el estado (qué avisos están activos) en `data/alertas.json`.
 
-**Configurar destinatarios:**
+Los secretos se guardan en **Settings → Secrets and variables → Actions → New repository secret**. Nunca pongas tokens, números ni claves en el código. Para probar: **Actions → Probar avisos → Run workflow**.
 
-1. Cada persona que quiera recibir los avisos activa CallMeBot desde su WhatsApp siguiendo las instrucciones de su página, y recibe una clave (apikey).
-2. En el repositorio, **Settings → Secrets and variables → Actions → New repository secret**, nombre `CALLMEBOT_DESTINOS`, valor con el formato `+593XXXXXXXXX:clave` (varios separados por `;`). Nunca pongas números ni claves en el código.
-3. En **Actions → Probar WhatsApp → Run workflow** se envía un mensaje de prueba.
+**Telegram** (`scripts/telegram.mjs`):
+
+1. En Telegram, crea un canal público (por ejemplo `@fondodebikini`).
+2. Habla con @BotFather, envía `/newbot` y guarda el token que te da.
+3. Agrega el bot al canal como administrador con permiso para publicar.
+4. Secretos: `TELEGRAM_TOKEN` (el token) y `TELEGRAM_CHAT` (el canal, con @).
+
+**WhatsApp** (`scripts/whatsapp.mjs`, opcional):
+
+1. Cada persona activa CallMeBot desde su WhatsApp siguiendo las instrucciones de su página y recibe una clave (apikey).
+2. Secreto `CALLMEBOT_DESTINOS` con el formato `+593XXXXXXXXX:clave` (varios separados por `;`).
 
 ## En local
 

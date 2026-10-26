@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { decidir, estadoInicial } from '../scripts/alertas.mjs';
+import { leerConfigTelegram } from '../scripts/telegram.mjs';
 import { leerDestinos } from '../scripts/whatsapp.mjs';
 
 const T0 = Date.parse('2026-10-26T04:00:00Z');
@@ -52,6 +53,13 @@ test('rayos: avisa al aparecer y al acercarse, como mucho uno por hora', () => {
 
 test('rayos: ignora datos del satélite de hace más de 20 minutos', () => {
   assert.equal(decidir(estadoInicial(), null, rayos(225, 10, min(-30)), T0).mensajes.length, 0);
+});
+
+test('configuración de Telegram', () => {
+  assert.deepEqual(leerConfigTelegram({ TELEGRAM_TOKEN: ' 123:abc ', TELEGRAM_CHAT: '@fondodebikini' }),
+    { token: '123:abc', chat: '@fondodebikini' });
+  assert.equal(leerConfigTelegram({ TELEGRAM_TOKEN: '123:abc' }), null);
+  assert.equal(leerConfigTelegram({}), null);
 });
 
 test('destinatarios de WhatsApp', () => {

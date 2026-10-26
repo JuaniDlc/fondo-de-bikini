@@ -1,4 +1,4 @@
-name: Probar WhatsApp
+name: Probar avisos
 
 on:
   workflow_dispatch:
@@ -20,4 +20,6 @@ jobs:
       - name: Enviar mensaje de prueba
         env:
           CALLMEBOT_DESTINOS: ${{ secrets.CALLMEBOT_DESTINOS }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
         run: node scripts/avisar.mjs --prueba
