@@ -1,4 +1,6 @@
-# Lluvia Guayaquil
+# Lluvia en Fondo de Bikini
+
+**https://juanidlc.github.io/fondo-de-bikini/**
 
 Página pública que estima la probabilidad de lluvia en Guayaquil cada hora, muestra hacia dónde va la tendencia y deja que cualquier visitante la actualice al momento, sin cuenta ni permisos.
 
@@ -28,11 +30,11 @@ tests/                      pruebas (node:test)
 
 ## Publicar en GitHub
 
-1. Crea un repositorio **público** en GitHub (por ejemplo `lluvia-guayaquil`) y sube este código a la rama `main`.
+1. Crea un repositorio **público** en GitHub (por ejemplo `fondo-de-bikini`) y sube este código a la rama `main`.
 2. En **Settings → Actions → General → Workflow permissions**, elige **Read and write permissions** y guarda.
 3. En **Settings → Pages**, en *Build and deployment* elige **Deploy from a branch**, rama `main`, carpeta `/ (root)`.
 4. En la pestaña **Actions**, abre «Actualizar lectura» y pulsa **Run workflow** una vez.
-5. Abre `https://<tu-usuario>.github.io/lluvia-guayaquil/`.
+5. Abre `https://<tu-usuario>.github.io/fondo-de-bikini/`.
 
 A partir de ahí el workflow corre solo cada hora (minuto 7, en UTC).
 
