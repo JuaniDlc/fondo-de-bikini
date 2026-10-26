@@ -1,38 +1,38 @@
 {
-  "generado": "2026-10-26T04:46:47.646Z",
-  "hora": "2026-10-25T23:00",
-  "probabilidad": 48.4,
+  "generado": "2026-10-26T05:25:35.795Z",
+  "hora": "2026-10-26T00:00",
+  "probabilidad": 48.6,
   "fuente": "corregido",
-  "corregido": 48.4,
+  "corregido": 48.6,
   "ensamble": 97.1,
-  "heuristica": 13.4,
+  "heuristica": 31.9,
   "temperatura": 25.3,
   "humedad": 96,
-  "presion": 1012.2,
+  "presion": 1011.8,
   "detalle": {
     "base": 0.05,
     "lluviosa": false,
     "td": 24.615161902404793,
     "sp": 0.6848380975952075,
-    "cambioEsperado": 0.4392304845413262,
-    "anomalia": 1.5607695154586738,
-    "z": -1.8657924967566222,
+    "cambioEsperado": -0.4392304845413262,
+    "anomalia": 0.4392304845413262,
+    "z": -0.7564073689309865,
     "factores": {
       "temporada": -1.8458266904983305,
       "margen": 1.823339046322636,
       "humedad": 0.96,
-      "tendencia": -1.4046925639128065,
-      "presion": -0.30000000000001137,
+      "tendencia": -0.3953074360871936,
+      "presion": -0.19999999999998863,
       "conveccion": 0
     }
   },
-  "momento": "2026-10-25T23:45",
-  "presion3h": 1010.2,
-  "proximas6h": 53.1,
+  "momento": "2026-10-26T00:15",
+  "presion3h": 1011.8,
+  "proximas6h": 48.2,
   "proximas6hFuente": "corregido",
   "usaAeropuerto": true,
   "aeropuerto": {
-    "hora": "2026-10-25T23:00",
+    "hora": "2026-10-26T00:00",
     "lluvia_ahora": 0,
     "lluvia_3h": 0,
     "reportes": 5
@@ -49,17 +49,6 @@
     }
   },
   "proyeccion": [
-    {
-      "hora": "2026-10-26T00:00",
-      "probabilidad": 48.6,
-      "fuente": "corregido",
-      "corregido": 48.6,
-      "ensamble": 97.1,
-      "heuristica": 27.2,
-      "temperatura": 25.3,
-      "humedad": 96,
-      "presion": 1012
-    },
     {
       "hora": "2026-10-26T01:00",
       "probabilidad": 43.4,
@@ -180,6 +169,17 @@
       "temperatura": 31.3,
       "humedad": 62,
       "presion": 1013.2
+    },
+    {
+      "hora": "2026-10-26T12:00",
+      "probabilidad": 3.8,
+      "fuente": "corregido",
+      "corregido": 3.8,
+      "ensamble": 88.9,
+      "heuristica": 0.5,
+      "temperatura": 31.5,
+      "humedad": 61,
+      "presion": 1011.9
     }
   ]
 }
