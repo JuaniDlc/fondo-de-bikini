@@ -6,6 +6,7 @@ import {
 } from './openmeteo.js';
 
 const ESPERA_BOTON_S = 60;
+const VIGENCIA_MIN = 15; // datos más viejos que esto se recalculan solos al abrir o volver a la página
 // Umbrales sobre la probabilidad de lluvia en las próximas 6 horas. En la evaluación de
 // analisis/resultados.md, cuando el modelo con el reporte del aeropuerto dijo ≥ 80 %,
 // llovió el 87 % de las veces.
@@ -22,6 +23,7 @@ const estado = {
   relleno: [],       // horas pasadas calculadas en el navegador (no se guardan)
   proyeccion: [],
   generado: null,    // cuándo escribió el workflow actual.json
+  obtenido: null,    // cuándo se calcularon los datos en pantalla (ms)
   nino: null,        // índices de El Niño guardados por el workflow
   aeropuerto: null,  // último reporte del aeropuerto resumido por el workflow
 };
@@ -279,7 +281,11 @@ function iniciarEspera(hasta) {
   tic();
 }
 
+let consultando = false;
+
 async function actualizarAhora({ automatico = false } = {}) {
+  if (consultando) return;
+  consultando = true;
   const boton = $('actualizar');
   const msg = $('estado');
   boton.disabled = true;
@@ -295,6 +301,7 @@ async function actualizarAhora({ automatico = false } = {}) {
     estado.proyeccion = datos.proyeccion;
     estado.relleno = datos.pasado;
     estado.generado = null;
+    estado.obtenido = Date.now();
     dibujar();
     msg.textContent = `Actualizado a las ${fmtHora.format(new Date())}`;
   } catch (e) {
@@ -304,8 +311,18 @@ async function actualizarAhora({ automatico = false } = {}) {
       ? 'No se pudo conectar con el servicio del clima. Se muestran los últimos datos.'
       : 'No se pudo conectar con el servicio del clima. Revisa tu conexión e inténtalo de nuevo.';
   } finally {
+    consultando = false;
     if (!automatico) iniciarEspera(Date.now() + ESPERA_BOTON_S * 1000);
     else if (leerEspera() <= Date.now()) boton.disabled = false;
+  }
+}
+
+/** Si los datos en pantalla tienen más de VIGENCIA_MIN minutos, los recalcula con el clima de ahora. */
+function refrescarSiHaceFalta({ alAbrir = false } = {}) {
+  // Al abrir siempre; después, solo mientras la pestaña esté a la vista.
+  if (!alAbrir && document.visibilityState !== 'visible') return;
+  if (!estado.obtenido || Date.now() - estado.obtenido > VIGENCIA_MIN * 60000) {
+    actualizarAhora({ automatico: true });
   }
 }
 
@@ -336,11 +353,13 @@ async function iniciar() {
     estado.proyeccion = proyeccion;
     estado.generado = generado;
     estado.aeropuerto = lectura.aeropuerto ?? null;
-    dibujar();
-  } else {
-    // Sin datos del workflow todavía: se consulta directamente.
-    await actualizarAhora({ automatico: true });
+    estado.obtenido = generado ? Date.parse(generado) : null;
+    dibujar(); // se muestra de inmediato lo guardado…
   }
+  // …y si es de hace más de 15 minutos (o no hay nada), se recalcula con el clima de este momento.
+  refrescarSiHaceFalta({ alAbrir: true });
+  document.addEventListener('visibilitychange', () => refrescarSiHaceFalta());
+  setInterval(() => refrescarSiHaceFalta(), 60000);
 
   let ancho = $('grafica').clientWidth;
   new ResizeObserver(() => {
