@@ -1,10 +1,10 @@
 {
- "generado": "2026-10-27T01:08:01Z",
+ "generado": "2026-10-27T03:40:14Z",
  "minutos": 10,
- "archivos": 28,
+ "archivos": 29,
  "radio_km": 60,
- "rayos": 78,
- "rayos_cerca": 16,
- "mas_cercano_km": 2.6,
- "rumbo": "suroeste"
+ "rayos": 0,
+ "rayos_cerca": 0,
+ "mas_cercano_km": null,
+ "rumbo": null
 }
