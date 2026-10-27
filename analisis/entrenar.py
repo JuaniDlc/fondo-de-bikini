@@ -130,6 +130,28 @@ def cargar() -> pd.DataFrame:
     df['nubes'] = p['cloud_cover_gfs_seamless']
     df['nubes_6h'] = p['cloud_cover_gfs_seamless'].rolling(VENTANA).mean().shift(-VENTANA)
 
+    # Variables adicionales del GFS (existen en el histórico y en vivo)
+    g = lambda v: p.get(f'{v}_gfs_seamless')  # noqa: E731
+    adelante = lambda s, f: getattr(s.rolling(VENTANA), f)().shift(-VENTANA)  # noqa: E731
+    if g('dew_point_2m') is not None:
+        df['spread'] = p['temperature_2m_gfs_seamless'] - g('dew_point_2m')  # T − Td
+        df['nubes_bajas'] = g('cloud_cover_low')
+        df['nubes_bajas_6h'] = adelante(g('cloud_cover_low'), 'mean')
+        df['li'] = g('lifted_index')
+        df['li_min_6h'] = adelante(g('lifted_index'), 'min')
+        df['cin'] = np.log1p(g('convective_inhibition').abs())
+        rad = np.radians(g('wind_direction_10m'))
+        df['viento_u'] = -g('wind_speed_10m') * np.sin(rad)
+        df['viento_v'] = -g('wind_speed_10m') * np.cos(rad)
+        df['chubascos'] = np.log1p(g('showers'))
+        df['chubascos_6h'] = np.log1p(adelante(g('showers'), 'sum'))
+    df['cape_icon'] = np.log1p(p['cape_icon_seamless'])
+    df['cape_icon_max_6h'] = np.log1p(adelante(p['cape_icon_seamless'], 'max'))
+
+    # Lluvia observada en el aeropuerto antes de la hora T (para «¿llueve en la hora T?»)
+    df['lluvia_previa'] = df['y_hora'].shift(1)
+    df['lluvia_previa_3h'] = df['y_hora'].shift(1).rolling(3, min_periods=3).max()
+
     pres = p['pressure_msl_gfs_seamless']
     df['heuristica'] = heuristica(pres, pres.shift(3), p['temperature_2m_gfs_seamless'],
                                   p['relative_humidity_2m_gfs_seamless'], df['mes'], hora)
@@ -178,20 +200,25 @@ def tabla_alertas(y, p, meses, horas):
     return filas
 
 
-PERSISTENCIA = ['lluvia_ahora', 'lluvia_3h']
+PERSISTENCIA = ['lluvia_ahora', 'lluvia_3h']  # para «próximas 6 h» desde T: lluvia hasta T
+PREVIA = ['lluvia_previa', 'lluvia_previa_3h']  # para «la hora T»: lluvia hasta T − 1
+METAR = {'hora': PREVIA, '6h': PERSISTENCIA}
 
 
 def entrenar(objetivo, df, extra=()):
     cols = VARIABLES[objetivo] + list(extra)
     y = f'y_{objetivo}'
-    # En 6 h todas las variantes usan las mismas horas: las que tienen reporte del aeropuerto ahora.
-    requeridas = PERSISTENCIA if objetivo == '6h' else []
+    # Todas las variantes de un objetivo usan las mismas horas: las que tienen reporte del aeropuerto.
+    requeridas = METAR[objetivo]
     datos = df.dropna(subset=cols + requeridas + [y, f'crudo_{objetivo}'])
     tr, te = datos[datos.index < CORTE], datos[datos.index >= CORTE]
     log = make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000)).fit(tr[cols], tr[y])
     gb = HistGradientBoostingClassifier(max_iter=300, learning_rate=0.05, max_leaf_nodes=15,
                                         l2_regularization=1.0, random_state=0).fit(tr[cols], tr[y])
     return cols, tr, te, log, gb
+
+
+CON_METAR = 'MOS logística + lluvia en el aeropuerto (METAR)'
 
 
 def climatologia(tr, te, y):
@@ -225,11 +252,10 @@ def main():
         }
         if objetivo == 'hora':
             candidatos = {'Heurística actual': te['heuristica'].to_numpy(), **candidatos}
-        else:
-            # Variante que sabe si está lloviendo ahora en el aeropuerto (requiere el METAR en vivo).
-            cols_p, _, te_p, log_p, _ = entrenar(objetivo, df, extra=PERSISTENCIA)
-            assert te_p.index.equals(te.index)
-            candidatos['MOS logística + lluvia actual (METAR)'] = log_p.predict_proba(te_p[cols_p])[:, 1]
+        # Variante que sabe si llovió en el aeropuerto justo antes (requiere el METAR en vivo).
+        cols_p, _, te_p, log_p, _ = entrenar(objetivo, df, extra=METAR[objetivo])
+        assert te_p.index.equals(te.index)
+        candidatos[CON_METAR] = log_p.predict_proba(te_p[cols_p])[:, 1]
 
         informe += [f'## {titulo}', '',
                     f'Horas de prueba: {len(te):,}. Llovió en el {pct(yt.mean())} de ellas '
@@ -240,14 +266,13 @@ def main():
             m = metricas(yt, p, brier_clim)
             informe.append(f"| {nombre} | {m['brier']:.3f} | {m['mejora'] * 100:+.0f} % | {m['auc']:.2f} |")
 
-        mejor = 'MOS: regresión logística'
+        mejor = CON_METAR  # el que usa la página
         p = candidatos[mejor]
         informe += ['', f'**Calibración de «{mejor}»** (cuando dice X %, ¿cuánto llovió?):', '',
                     '| Pronóstico | Horas | Promedio pronosticado | Llovió de verdad |', '|---|---|---|---|']
         informe += [f"| {f['rango']} | {f['horas']:,} | {pct(f['pronostico'])} | {pct(f['llovio'])} |"
                     for f in tabla_calibracion(yt, p)]
-        modelos_alerta = [mejor] + (['MOS logística + lluvia actual (METAR)'] if objetivo == '6h' else [])
-        for nombre in modelos_alerta:
+        for nombre in ('MOS: regresión logística', CON_METAR):
             informe += ['', f'**Si se usara como alerta** («{nombre}»):', '',
                         '| Alerta cuando dice ≥ | Avisos por mes | Cuando alerta, llueve | Lluvias que detecta |',
                         '|---|---|---|---|']
@@ -256,7 +281,7 @@ def main():
 
         # Por temporada y en el mes actual
         informe += ['', '**Por periodo** (mejora sobre climatología; AUC):', '',
-                    '| Periodo | Horas | Llovió | Modelos crudos | MOS logística |', '|---|---|---|---|---|']
+                    '| Periodo | Horas | Llovió | Modelos crudos | MOS con METAR |', '|---|---|---|---|---|']
         periodos = {
             'Temporada lluviosa (ene–abr)': te['mes'].between(1, 4).to_numpy(),
             'Temporada seca (may–dic)': ~te['mes'].between(1, 4).to_numpy(),
@@ -288,6 +313,13 @@ COLUMNAS_FIXTURE = {
 }
 
 
+ADELANTOS = range(1, 7)
+
+
+def nombre_previa(k):
+    return 'hora_con_metar' if k == 1 else f'hora_con_metar_{k}'
+
+
 def exportar_produccion(df, p):
     """Reentrena con todos los datos (2023 a hoy) y escribe:
     - assets/mos-coeficientes.js, que usan la página y el workflow;
@@ -295,14 +327,22 @@ def exportar_produccion(df, p):
       para comprobar que JavaScript calcula exactamente lo mismo."""
     raiz = AQUI.parent
     modelos, filas = {}, {}
-    for nombre, objetivo, extra in (('hora', 'hora', ()), ('6h', '6h', ()), ('6h_con_metar', '6h', PERSISTENCIA)):
-        cols = VARIABLES[objetivo] + list(extra)
-        y = f'y_{objetivo}'
-        requeridas = PERSISTENCIA if objetivo == '6h' else []
-        datos = df.dropna(subset=cols + requeridas + [y])
+    def ajustar(nombre, datos, cols, y):
+        datos = datos.dropna(subset=cols + [y])
         pipe = make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000)).fit(datos[cols], datos[y])
         modelos[nombre] = exportar(pipe, cols)
         filas[nombre] = (datos, pipe, cols)
+
+    ajustar('hora', df, VARIABLES['hora'], 'y_hora')
+    ajustar('6h', df, VARIABLES['6h'], 'y_6h')
+    ajustar('6h_con_metar', df, VARIABLES['6h'] + PERSISTENCIA, 'y_6h')
+    # «La hora T» con la lluvia del aeropuerto de k horas antes: un modelo por anticipación,
+    # porque el efecto de «está lloviendo» se va perdiendo con las horas.
+    for k in ADELANTOS:
+        d = df.copy()
+        d['lluvia_previa'] = d['y_hora'].shift(k)
+        d['lluvia_previa_3h'] = d['y_hora'].shift(k).rolling(3, min_periods=3).max()
+        ajustar(nombre_previa(k), d, VARIABLES['hora'] + PREVIA, 'y_hora')
 
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
@@ -312,9 +352,11 @@ def exportar_produccion(df, p):
         f'export default {json.dumps({"meta": meta, **modelos}, indent=2, ensure_ascii=False)};\n',
         encoding='utf-8')
 
-    # Casos de prueba: horas variadas donde los tres modelos se pueden calcular.
+    # Casos de prueba: horas variadas donde los cuatro modelos se pueden calcular.
     datos6, _, _ = filas['6h_con_metar']
     comunes = datos6.index.intersection(filas['hora'][0].index)
+    for k in ADELANTOS:
+        comunes = comunes.intersection(filas[nombre_previa(k)][0].index)
     elegidas = list(pd.Series(comunes).sample(5, random_state=7))
     elegidas.append(datos6.loc[comunes, 'lluvia_ahora'].idxmax())  # una con lluvia en el aeropuerto
     casos = []
@@ -331,8 +373,14 @@ def exportar_produccion(df, p):
             'hourly': hourly,
             'nino': [{'semana': (p.loc[t, 'disponible'] - pd.Timedelta(days=7)).strftime('%Y-%m-%d'),
                       'nino12': float(p.loc[t, 'nino12']), 'nino34': float(p.loc[t, 'nino34'])}],
+            # Resumen del aeropuerto hasta T (para 6 h desde T) y hasta T − 1 (para la hora T)
             'aeropuerto': {'lluvia_ahora': float(df.loc[t, 'lluvia_ahora']),
                            'lluvia_3h': float(df.loc[t, 'lluvia_3h'])},
+            # Para «la hora T» con k horas de anticipación: el aeropuerto hasta T − k
+            'aeropuerto_previo': {
+                str(k): {'lluvia_ahora': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa']),
+                         'lluvia_3h': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa_3h'])}
+                for k in ADELANTOS},
             'esperado': esperado,
         })
     destino = raiz / 'tests' / 'fixtures'

@@ -1,78 +1,89 @@
 # Fase B: ¿qué tan certeros son los pronósticos de lluvia para Guayaquil?
 
-Verdad: lluvia o llovizna reportada en el aeropuerto (SEGU). Entrenamiento: 2023-01-01 a 2024-12-31. Prueba (datos que el modelo no vio): 2025-01-01 a 2026-10-24.
+Verdad: lluvia o llovizna reportada en el aeropuerto (SEGU). Entrenamiento: 2023-01-01 a 2024-12-31. Prueba (datos que el modelo no vio): 2025-01-01 a 2026-10-25.
 
 ## ¿Llueve en esta hora?
 
-Horas de prueba: 15,663. Llovió en el 7 % de ellas (en entrenamiento: 6 %).
+Horas de prueba: 15,380. Llovió en el 7 % de ellas (en entrenamiento: 6 %).
 
 | Modelo | Brier (menor es mejor) | Mejora sobre climatología | AUC (0,5 = azar, 1 = perfecto) |
 |---|---|---|---|
-| Heurística actual | 0.161 | -189 % | 0.81 |
+| Heurística actual | 0.159 | -185 % | 0.81 |
 | Climatología (mes y hora) | 0.056 | +0 % | 0.78 |
-| Modelos crudos (GFS, ECMWF, ICON) | 0.143 | -157 % | 0.87 |
-| MOS: regresión logística | 0.048 | +13 % | 0.89 |
+| Modelos crudos (GFS, ECMWF, ICON) | 0.143 | -156 % | 0.87 |
+| MOS: regresión logística | 0.048 | +14 % | 0.89 |
 | MOS: gradient boosting | 0.052 | +7 % | 0.87 |
+| MOS logística + lluvia en el aeropuerto (METAR) | 0.032 | +43 % | 0.94 |
 
-**Calibración de «MOS: regresión logística»** (cuando dice X %, ¿cuánto llovió?):
+**Calibración de «MOS logística + lluvia en el aeropuerto (METAR)»** (cuando dice X %, ¿cuánto llovió?):
 
 | Pronóstico | Horas | Promedio pronosticado | Llovió de verdad |
 |---|---|---|---|
-| 0–10 % | 12,397 | 2 % | 2 % |
-| 10–20 % | 1,367 | 14 % | 12 % |
-| 20–30 % | 594 | 24 % | 18 % |
-| 30–40 % | 361 | 35 % | 30 % |
-| 40–50 % | 291 | 45 % | 40 % |
-| 50–60 % | 253 | 55 % | 43 % |
-| 60–70 % | 181 | 65 % | 50 % |
-| 70–80 % | 121 | 75 % | 53 % |
-| 80–90 % | 79 | 84 % | 67 % |
-| 90–100 % | 19 | 92 % | 84 % |
+| 0–10 % | 13,587 | 2 % | 2 % |
+| 10–20 % | 545 | 14 % | 11 % |
+| 20–30 % | 188 | 24 % | 23 % |
+| 30–40 % | 88 | 35 % | 43 % |
+| 40–50 % | 96 | 45 % | 41 % |
+| 50–60 % | 96 | 55 % | 50 % |
+| 60–70 % | 157 | 65 % | 62 % |
+| 70–80 % | 165 | 75 % | 70 % |
+| 80–90 % | 279 | 86 % | 82 % |
+| 90–100 % | 179 | 93 % | 85 % |
 
 **Si se usara como alerta** («MOS: regresión logística»):
 
 | Alerta cuando dice ≥ | Avisos por mes | Cuando alerta, llueve | Lluvias que detecta |
 |---|---|---|---|
 | 50 % | 6 | 51 % | 32 % |
-| 60 % | 4 | 56 % | 21 % |
-| 70 % | 2 | 61 % | 13 % |
-| 80 % | 1 | 70 % | 7 % |
-| 90 % | 1 | 84 % | 2 % |
+| 60 % | 4 | 57 % | 22 % |
+| 70 % | 2 | 62 % | 12 % |
+| 80 % | 1 | 72 % | 6 % |
+| 90 % | 0 | 88 % | 1 % |
+
+**Si se usara como alerta** («MOS logística + lluvia en el aeropuerto (METAR)»):
+
+| Alerta cuando dice ≥ | Avisos por mes | Cuando alerta, llueve | Lluvias que detecta |
+|---|---|---|---|
+| 50 % | 12 | 73 % | 63 % |
+| 60 % | 10 | 76 % | 58 % |
+| 70 % | 8 | 80 % | 48 % |
+| 80 % | 5 | 83 % | 37 % |
+| 90 % | 3 | 85 % | 15 % |
 
 **Por periodo** (mejora sobre climatología; AUC):
 
-| Periodo | Horas | Llovió | Modelos crudos | MOS logística |
+| Periodo | Horas | Llovió | Modelos crudos | MOS con METAR |
 |---|---|---|---|---|
-| Temporada lluviosa (ene–abr) | 5,619 | 15 % | -131 %; 0.77 | +11 %; 0.82 |
-| Temporada seca (may–dic) | 10,044 | 2 % | -241 %; 0.87 | +19 %; 0.87 |
-| Último mes (2026-10) | 573 | 10 % | -133 %; 0.84 | +33 %; 0.89 |
+| Temporada lluviosa (ene–abr) | 5,511 | 15 % | -129 %; 0.78 | +43 %; 0.91 |
+| Temporada seca (may–dic) | 9,869 | 2 % | -235 %; 0.88 | +42 %; 0.92 |
+| Último mes (2026-10) | 591 | 11 % | -119 %; 0.84 | +54 %; 0.93 |
 
 ## ¿Llueve en las próximas 6 horas?
 
-Horas de prueba: 14,861. Llovió en el 15 % de ellas (en entrenamiento: 15 %).
+Horas de prueba: 14,885. Llovió en el 15 % de ellas (en entrenamiento: 15 %).
 
 | Modelo | Brier (menor es mejor) | Mejora sobre climatología | AUC (0,5 = azar, 1 = perfecto) |
 |---|---|---|---|
 | Climatología (mes y hora) | 0.110 | +0 % | 0.76 |
-| Modelos crudos (GFS, ECMWF, ICON) | 0.211 | -93 % | 0.85 |
-| MOS: regresión logística | 0.085 | +22 % | 0.90 |
-| MOS: gradient boosting | 0.094 | +14 % | 0.86 |
-| MOS logística + lluvia actual (METAR) | 0.077 | +30 % | 0.91 |
+| Modelos crudos (GFS, ECMWF, ICON) | 0.211 | -92 % | 0.85 |
+| MOS: regresión logística | 0.086 | +22 % | 0.90 |
+| MOS: gradient boosting | 0.094 | +15 % | 0.86 |
+| MOS logística + lluvia en el aeropuerto (METAR) | 0.077 | +30 % | 0.91 |
 
-**Calibración de «MOS: regresión logística»** (cuando dice X %, ¿cuánto llovió?):
+**Calibración de «MOS logística + lluvia en el aeropuerto (METAR)»** (cuando dice X %, ¿cuánto llovió?):
 
 | Pronóstico | Horas | Promedio pronosticado | Llovió de verdad |
 |---|---|---|---|
-| 0–10 % | 8,421 | 4 % | 2 % |
-| 10–20 % | 1,894 | 15 % | 11 % |
-| 20–30 % | 1,030 | 25 % | 18 % |
-| 30–40 % | 838 | 35 % | 27 % |
-| 40–50 % | 606 | 45 % | 34 % |
-| 50–60 % | 564 | 55 % | 51 % |
-| 60–70 % | 485 | 65 % | 50 % |
-| 70–80 % | 507 | 75 % | 65 % |
-| 80–90 % | 469 | 85 % | 79 % |
-| 90–100 % | 47 | 91 % | 100 % |
+| 0–10 % | 8,949 | 3 % | 2 % |
+| 10–20 % | 1,872 | 14 % | 12 % |
+| 20–30 % | 968 | 25 % | 19 % |
+| 30–40 % | 668 | 35 % | 27 % |
+| 40–50 % | 506 | 45 % | 39 % |
+| 50–60 % | 427 | 55 % | 46 % |
+| 60–70 % | 373 | 65 % | 57 % |
+| 70–80 % | 360 | 75 % | 64 % |
+| 80–90 % | 293 | 85 % | 80 % |
+| 90–100 % | 469 | 95 % | 91 % |
 
 **Si se usara como alerta** («MOS: regresión logística»):
 
@@ -84,20 +95,20 @@ Horas de prueba: 14,861. Llovió en el 15 % de ellas (en entrenamiento: 15 %).
 | 80 % | 3 | 81 % | 19 % |
 | 90 % | 1 | 100 % | 2 % |
 
-**Si se usara como alerta** («MOS logística + lluvia actual (METAR)»):
+**Si se usara como alerta** («MOS logística + lluvia en el aeropuerto (METAR)»):
 
 | Alerta cuando dice ≥ | Avisos por mes | Cuando alerta, llueve | Lluvias que detecta |
 |---|---|---|---|
 | 50 % | 13 | 68 % | 58 % |
 | 60 % | 12 | 74 % | 49 % |
-| 70 % | 11 | 79 % | 39 % |
+| 70 % | 11 | 80 % | 40 % |
 | 80 % | 9 | 87 % | 29 % |
 | 90 % | 6 | 91 % | 19 % |
 
 **Por periodo** (mejora sobre climatología; AUC):
 
-| Periodo | Horas | Llovió | Modelos crudos | MOS logística |
+| Periodo | Horas | Llovió | Modelos crudos | MOS con METAR |
 |---|---|---|---|---|
-| Temporada lluviosa (ene–abr) | 5,331 | 32 % | -65 %; 0.74 | +18 %; 0.81 |
-| Temporada seca (may–dic) | 9,530 | 6 % | -145 %; 0.85 | +30 %; 0.89 |
-| Último mes (2026-10) | 552 | 25 % | -56 %; 0.76 | +42 %; 0.83 |
+| Temporada lluviosa (ene–abr) | 5,331 | 32 % | -65 %; 0.74 | +27 %; 0.85 |
+| Temporada seca (may–dic) | 9,554 | 6 % | -142 %; 0.86 | +37 %; 0.90 |
+| Último mes (2026-10) | 576 | 26 % | -50 %; 0.76 | +49 %; 0.85 |

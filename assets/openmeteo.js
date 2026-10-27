@@ -202,12 +202,13 @@ function fila(hora, T, HR, P, P3, series, modelos, contexto) {
 
 /**
  * Convierte las respuestas de Open-Meteo en:
- * - actual: la lectura de ahora con su probabilidad, la de las próximas 6 h y el detalle
- * - pasado: las horas anteriores, calculadas con los datos horarios
- * - proyeccion: las horas siguientes, calculadas con el pronóstico
+ * - actual: la lectura de ahora; su probabilidad es la de la hora en curso (de T0 a T0 + 1,
+ *   que en Open-Meteo se llama T0 + 1) y proximas6h la de las 6 horas desde T0
+ * - pasado: las horas ya terminadas (hasta T0), calculadas con los datos horarios
+ * - proyeccion: las horas siguientes a la hora en curso, calculadas con el pronóstico
  *
  * contexto.nino: índices semanales de El Niño; contexto.aeropuerto: lluvia reportada en
- * SEGU ({hora, lluvia_ahora, lluvia_3h}), que solo se usa si es de la hora actual.
+ * SEGU hasta T0 ({hora, lluvia_ahora, lluvia_3h}), que solo se usa si es de T0.
  */
 export function procesarRespuesta({ clima, modelos = null, ensamble = null }, { nino = null, aeropuerto = null } = {}) {
   const series = ensamble ? seriesEnsamble(ensamble) : null;
@@ -220,19 +221,36 @@ export function procesarRespuesta({ clima, modelos = null, ensamble = null }, { 
   };
 
   const c = clima.current;
-  const horaActual = `${c.time.slice(0, 13)}:00`;
+  const horaActual = `${c.time.slice(0, 13)}:00`; // T0: la última hora terminada
+  const horaLluvia = sumarHoras(horaActual, 1); // la hora en curso
   const P3 = presionEn(sumarHoras(horaActual, -3));
   const aeropuertoVigente = aeropuerto && aeropuerto.hora === horaActual ? aeropuerto : null;
+  const contextoAhora = { nino, aeropuerto: aeropuertoVigente };
+  // Condiciones de ahora y «próximas 6 h» (desde T0, con el aeropuerto hasta T0)
   const { ens, mos, ...filaActual } = fila(
-    horaActual, c.temperature_2m, c.relative_humidity_2m, c.pressure_msl, P3, series, modelos,
-    { nino, aeropuerto: aeropuertoVigente },
+    horaActual, c.temperature_2m, c.relative_humidity_2m, c.pressure_msl, P3, series, modelos, contextoAhora,
   );
   const [fuente6h, p6] = primeraDisponible([
     ['corregido', mos?.proximas6h],
     ['ensamble', ens?.ventana],
   ]) ?? ['ninguna', null];
+  // «Esta hora»: la hora en curso, con el aeropuerto hasta T0 como «lluvia previa»
+  const iSig = modelos ? modelos.hourly.time.indexOf(horaLluvia) : -1;
+  const mosSig = iSig >= 0 ? probabilidadesMOS(modelos.hourly, iSig, contextoAhora) : null;
+  const ensSig = probabilidadEnsamble(series, horaLluvia);
+  const [fuente, pHora] = primeraDisponible([
+    ['corregido', mosSig?.hora],
+    ['ensamble', ensSig?.probabilidad],
+    ['heuristica', filaActual.heuristica / 100],
+  ]);
   const actual = {
     ...filaActual,
+    horaLluvia,
+    probabilidad: pct(pHora),
+    fuente,
+    corregido: pct(mosSig?.hora),
+    ensamble: pct(ensSig?.probabilidad),
+    horaUsaAeropuerto: Boolean(mosSig?.horaUsaAeropuerto),
     momento: c.time,
     presion3h: P3,
     proximas6h: pct(p6),
@@ -253,14 +271,17 @@ export function procesarRespuesta({ clima, modelos = null, ensamble = null }, { 
     const HR = h.relative_humidity_2m[i];
     const P = h.pressure_msl[i];
     if (![T, HR, P].every((v) => typeof v === 'number')) return;
-    if (hora === horaActual) return;
+    if (hora === horaLluvia) return; // la hora en curso ya está en «actual»
+    // Las próximas horas también usan el aeropuerto, con un modelo según cuántas horas faltan.
+    const adelanto = horasEntre(horaActual, hora);
+    const contexto = adelanto >= 2 && adelanto <= 6 ? { ...contextoAhora, adelanto } : { nino };
     const { ens: _e, mos: _m, detalle: _d, ...f } = fila(
-      hora, T, HR, P, presionEn(sumarHoras(hora, -3)), series, modelos, { nino },
+      hora, T, HR, P, presionEn(sumarHoras(hora, -3)), series, modelos, contexto,
     );
     // Para no mezclar fuentes en la gráfica: si la hora actual usa el modelo corregido,
     // las horas donde no se puede calcular (bordes de la ventana de datos) se omiten.
     if (actual.fuente === 'corregido' && f.fuente !== 'corregido') return;
-    (hora < horaActual ? pasado : proyeccion).push(f);
+    (hora < horaLluvia ? pasado : proyeccion).push(f);
   });
 
   return { actual, pasado, proyeccion };

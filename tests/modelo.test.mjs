@@ -99,8 +99,8 @@ const serie = (lluvias) => HORAS.map((h) => lluvias[h.slice(11, 13)] ?? 0);
 const ENSAMBLE = {
   hourly: {
     time: HORAS,
-    // ECMWF: una simulación llueve a las 15, la otra a las 18
-    precipitation_ecmwf_ifs025_ensemble: serie({ 15: 0.5 }),
+    // ECMWF: una simulación llueve a las 15 y 16, la otra a las 18
+    precipitation_ecmwf_ifs025_ensemble: serie({ 15: 0.5, 16: 0.3 }),
     precipitation_member01_ecmwf_ifs025_ensemble: serie({ 18: 0.2 }),
     // GFS: una simulación seca, la otra llueve a las 15; 0.05 mm no cuenta como lluvia
     precipitation_ncep_gefs025: serie({ 16: 0.05 }),
@@ -112,19 +112,21 @@ test('procesarRespuesta separa pasado, actual y proyección', () => {
   const { actual, pasado, proyeccion } = procesarRespuesta({ clima: CLIMA, ensamble: ENSAMBLE });
   assert.equal(actual.hora, '2026-02-10T15:00');
   assert.equal(actual.presion3h, 1011);
-  assert.deepEqual(pasado.map((f) => f.hora.slice(11)), ['11:00', '12:00', '13:00', '14:00']);
-  assert.deepEqual(proyeccion.map((f) => f.hora.slice(11)), ['16:00', '17:00', '18:00', '19:00', '20:00', '21:00']);
+  assert.deepEqual(pasado.map((f) => f.hora.slice(11)), ['11:00', '12:00', '13:00', '14:00', '15:00']);
+  assert.deepEqual(proyeccion.map((f) => f.hora.slice(11)), ['17:00', '18:00', '19:00', '20:00', '21:00']);
 });
 
 test('probabilidad del ensamble: promedio de modelos, en la hora y en 6 h', () => {
   const { actual, proyeccion } = procesarRespuesta({ clima: CLIMA, ensamble: ENSAMBLE });
   assert.equal(actual.fuente, 'ensamble');
-  assert.equal(actual.probabilidad, 50); // ECMWF 1/2, GFS 1/2
+  // «Esta hora» es la hora en curso (15:30 → la de 16:00, de 15 a 16): ECMWF 1/2, GFS 0/2
+  assert.equal(actual.horaLluvia, '2026-02-10T16:00');
+  assert.equal(actual.probabilidad, 25);
   assert.equal(actual.heuristica, 93);
   assert.equal(actual.proximas6h, 75); // ECMWF 2/2, GFS 1/2 entre 15:00 y 20:00
   assert.deepEqual(actual.modelos.proximas6h, { ecmwf: 100, gfs: 50 });
   assert.equal(proyeccion.find((f) => f.hora.endsWith('18:00')).probabilidad, 25); // ECMWF 1/2, GFS 0/2
-  assert.equal(proyeccion.find((f) => f.hora.endsWith('16:00')).probabilidad, 0);
+  assert.equal(proyeccion.find((f) => f.hora.endsWith('17:00')).probabilidad, 0);
 });
 
 test('sin ensambles la probabilidad cae a la heurística', () => {

@@ -56,6 +56,16 @@ function rangoGrafica() {
   return { desde: -Math.max(PASADO_MIN_H, horaDelDia), hasta: FUTURO_H };
 }
 
+/**
+ * Cada fila de Open-Meteo acumula la lluvia de la hora anterior (la de las 14:00 es de 13:00 a 14:00),
+ * así que se dibuja donde empieza: t = 0 es la hora en curso. hora = inicio, para mostrarla.
+ */
+const punto = (f) => ({
+  hora: sumarHoras(f.hora, -1),
+  t: horasEntre(estado.actual.hora, f.hora) - 1,
+  y: f.probabilidad,
+});
+
 /** Puntos reales dentro del rango, terminando en la lectura de ahora. t en horas (0 = ahora). */
 function serieReal() {
   const { actual } = estado;
@@ -64,7 +74,7 @@ function serieReal() {
   for (const f of estado.historial) porHora.set(f.hora, f); // el historial oficial manda
   const { desde } = rangoGrafica();
   const puntos = [...porHora.values()]
-    .map((f) => ({ hora: f.hora, t: horasEntre(actual.hora, f.hora), y: f.probabilidad }))
+    .map(punto)
     .filter((p) => p.t < 0 && p.t >= desde)
     .sort((a, b) => a.t - b.t);
   puntos.push({ hora: actual.hora, t: 0, y: actual.probabilidad });
@@ -73,7 +83,7 @@ function serieReal() {
 
 function serieProyeccion() {
   return estado.proyeccion
-    .map((f) => ({ hora: f.hora, t: horasEntre(estado.actual.hora, f.hora), y: f.probabilidad }))
+    .map(punto)
     .filter((p) => p.t > 0 && p.t <= FUTURO_H);
 }
 

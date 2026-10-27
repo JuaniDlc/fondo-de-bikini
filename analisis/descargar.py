@@ -20,7 +20,9 @@ DATOS = Path(__file__).parent / 'datos'
 INICIO = dt.date(2023, 1, 1)
 LAT, LON = -2.19, -79.89
 ZONA = 'America/Guayaquil'
-VARIABLES = ['precipitation', 'cape', 'relative_humidity_2m', 'temperature_2m', 'pressure_msl', 'cloud_cover']
+VARIABLES = ['precipitation', 'cape', 'relative_humidity_2m', 'temperature_2m', 'pressure_msl', 'cloud_cover',
+             'dew_point_2m', 'cloud_cover_low', 'lifted_index', 'convective_inhibition',
+             'wind_speed_10m', 'wind_direction_10m', 'showers']
 # ecmwf_ifs04 cubre 2023 y se une con ecmwf_ifs025, que empieza en 2024.
 MODELOS = ['gfs_seamless', 'ecmwf_ifs025', 'ecmwf_ifs04', 'icon_seamless']
 

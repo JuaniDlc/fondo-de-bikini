@@ -58,8 +58,12 @@ export function variablesMOS(hourly, i, { nino, aeropuerto } = {}) {
     dia_cos: Math.cos((2 * Math.PI * dia) / 365.25),
     nino12: n ? n.nino12 : null,
     nino34: n ? n.nino34 : null,
+    // El mismo resumen del aeropuerto sirve a dos modelos: para «6 h desde la hora i» es la lluvia
+    // hasta i; para «la hora i» es la lluvia hasta i − 1. Quien llama pasa el índice que corresponde.
     lluvia_ahora: aeropuerto?.lluvia_ahora ?? null,
     lluvia_3h: aeropuerto?.lluvia_3h ?? null,
+    lluvia_previa: aeropuerto?.lluvia_ahora ?? null,
+    lluvia_previa_3h: aeropuerto?.lluvia_3h ?? null,
   };
   for (const [corto, modelo] of Object.entries(MODELOS_MOS)) {
     const col = `precipitation_${modelo}`;
@@ -97,18 +101,24 @@ export function aplicarMOS(nombre, variables) {
   return 1 / (1 + Math.exp(-z));
 }
 
+/** Nombre del modelo de «la hora i» con el aeropuerto resumido hasta i − adelanto. */
+export const modeloPrevia = (adelanto) => (adelanto === 1 ? 'hora_con_metar' : `hora_con_metar_${adelanto}`);
+
 /**
- * Probabilidades del modelo corregido para la hora con índice i:
- * - hora: que llueva en esa hora
- * - proximas6h: que llueva en algún momento de las 6 horas siguientes; usa el reporte
- *   del aeropuerto si se lo pasan, y si no, la variante sin él
+ * Probabilidades del modelo corregido para la hora con índice i (la hora i acumula la lluvia
+ * de i − 1 a i, como en Open-Meteo). Con contexto.aeropuerto usa las variantes con el reporte:
+ * - hora: que llueva en la hora i (aeropuerto resumido hasta i − contexto.adelanto, 1 a 6 h)
+ * - proximas6h: que llueva en algún momento de i + 1 … i + 6 (aeropuerto resumido hasta i)
  */
 export function probabilidadesMOS(hourly, i, contexto = {}) {
   const v = variablesMOS(hourly, i, contexto);
-  const conMetar = aplicarMOS('6h_con_metar', v);
+  const adelanto = contexto.adelanto ?? 1;
+  const horaMetar = COEF[modeloPrevia(adelanto)] ? aplicarMOS(modeloPrevia(adelanto), v) : null;
+  const seisMetar = aplicarMOS('6h_con_metar', v);
   return {
-    hora: aplicarMOS('hora', v),
-    proximas6h: conMetar ?? aplicarMOS('6h', v),
-    usaAeropuerto: conMetar !== null,
+    hora: horaMetar ?? aplicarMOS('hora', v),
+    horaUsaAeropuerto: horaMetar !== null,
+    proximas6h: seisMetar ?? aplicarMOS('6h', v),
+    usaAeropuerto: seisMetar !== null,
   };
 }

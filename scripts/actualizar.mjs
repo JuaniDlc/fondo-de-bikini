@@ -48,11 +48,12 @@ const porHora = new Map(historial.map((f) => [f.hora, f]));
 for (const f of pasado) {
   if (!porHora.has(f.hora)) porHora.set(f.hora, { ...f, origen: 'horario' });
 }
-porHora.set(actual.hora, { ...sinDetalle(actual), origen: 'lectura' });
+// La lectura se guarda en la hora que pronostica (la hora en curso), como las demás filas.
+porHora.set(actual.horaLluvia, { ...sinDetalle(actual), hora: actual.horaLluvia, horaLectura: actual.hora, origen: 'lectura' });
 
 const desde = sumarHoras(actual.hora, -24 * DIAS_HISTORIAL);
 const filas = [...porHora.values()]
-  .filter((f) => f.hora > desde && f.hora <= actual.hora)
+  .filter((f) => f.hora > desde && f.hora <= actual.horaLluvia)
   .sort((a, b) => a.hora.localeCompare(b.hora));
 
 const salidaActual = {

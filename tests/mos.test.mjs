@@ -11,9 +11,13 @@ test('el modelo corregido da en JavaScript lo mismo que en Python', () => {
   assert.ok(casos.length >= 5);
   for (const c of casos) {
     const i = c.hourly.time.indexOf(c.hora);
+    // Los modelos de «la hora T» con k horas de anticipación usan el aeropuerto hasta T − k;
+    // los de 6 h, hasta T.
     const v = variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto });
     for (const [nombre, esperado] of Object.entries(c.esperado)) {
-      const p = aplicarMOS(nombre, v);
+      const k = nombre === 'hora_con_metar' ? '1' : nombre.match(/^hora_con_metar_(\d)$/)?.[1];
+      const vk = k ? variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto_previo[k] }) : v;
+      const p = aplicarMOS(nombre, vk);
       assert.ok(Math.abs(p - esperado) < 1e-5, `${c.hora} ${nombre}: ${p} ≠ ${esperado}`);
     }
   }
