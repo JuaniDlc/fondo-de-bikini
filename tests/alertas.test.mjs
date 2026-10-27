@@ -98,6 +98,16 @@ test('rayos: estado guardado antes de existir el cierre (sin «avisada»)', () =
   assert.match(r.mensajes[0], /se alejó/);
 });
 
+test('rayos: si la tormenta sigue, recuerda cada 2 horas', () => {
+  let r = decidir(estadoInicial(), null, rayos(100, 15), T0);
+  assert.equal(r.mensajes.length, 1);
+  r = decidir(r.estado, null, rayos(100, 10, min(90)), min(90)); // sigue, pero < 2 h
+  assert.equal(r.mensajes.length, 0);
+  r = decidir(r.estado, null, rayos(79, 2.6, min(210)), min(210)); // sigue después de 3,5 h
+  assert.equal(r.mensajes.length, 1);
+  assert.match(r.mensajes[0], /sobre Guayaquil \(a 3 km\)/);
+});
+
 test('rayos: ignora datos del satélite de hace más de 20 minutos', () => {
   assert.equal(decidir(estadoInicial(), null, rayos(225, 10, min(-30)), T0).mensajes.length, 0);
 });

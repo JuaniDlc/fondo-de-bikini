@@ -12,6 +12,7 @@ export const LLUVIA_ACTIVA = 80;
 export const LLUVIA_DESACTIVA = 60;
 export const RAYOS_MINIMOS = 3; // menos que esto puede ser ruido del sensor
 export const ESPERA_RAYOS_MIN = 60;
+export const REPETIR_RAYOS_MIN = 120; // tormenta que sigue activa: se recuerda cada 2 horas
 export const SIN_RAYOS_MIN = 30; // sin rayos este tiempo = la tormenta se alejó
 const VIGENCIA_ACTUAL_MIN = 120;
 const VIGENCIA_RAYOS_MIN = 20;
@@ -59,8 +60,12 @@ export function decidir(estado, actual, rayos, ahora = Date.now()) {
     r.avisada ??= r.nivel > 0; // estados guardados antes de que existiera el aviso de cierre
     const nivel = nivelRayos(rayos);
     if (nivel > 0) r.ultimoRayo = rayos.generado;
-    const esperaCumplida = !r.enviado || minutosDesde(r.enviado, ahora) >= ESPERA_RAYOS_MIN;
-    if (nivel > r.nivel && (esperaCumplida || nivel === 2)) {
+    const desdeAviso = r.enviado ? minutosDesde(r.enviado, ahora) : Infinity;
+    const sube = nivel > r.nivel && (desdeAviso >= ESPERA_RAYOS_MIN || nivel === 2);
+    // Si la tormenta no se ha ido (o las revisiones se atrasaron y no se vio irse),
+    // se vuelve a avisar cuando pasaron 2 horas desde el último aviso.
+    const sigue = nivel > 0 && desdeAviso >= REPETIR_RAYOS_MIN;
+    if (sube || sigue) {
       Object.assign(r, { nivel, enviado: new Date(ahora).toISOString(), avisada: true });
       mensajes.push(mensajeRayos(rayos));
     } else if (nivel === 0) {
@@ -93,7 +98,9 @@ export function mensajeRayosFin() {
 }
 
 export function mensajeRayos(r) {
-  const donde = r.mas_cercano_km <= 25
+  const donde = r.mas_cercano_km <= 5
+    ? `sobre Guayaquil (a ${Math.round(r.mas_cercano_km)} km)`
+    : r.mas_cercano_km <= 25
     ? `muy cerca de Guayaquil (a ${Math.round(r.mas_cercano_km)} km)`
     : `a ${Math.round(r.mas_cercano_km)} km${r.rumbo ? ` al ${r.rumbo}` : ''} de Guayaquil`;
   return `⚡ Tormenta eléctrica ${donde}: ${r.rayos} rayos en los últimos ${r.minutos} minutos. `
