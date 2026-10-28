@@ -1,0 +1,69 @@
+name: Historial infrarrojo
+
+# Resume las nubes de tormenta (infrarrojo de GOES) cerca de Guayaquil, un mes por trabajo, para
+# entrenar el modelo corregido (analisis/infrarrojo_historial.py). Solo se corre a mano; los resultados quedan
+# como artefactos del workflow, no se guardan en el repositorio.
+
+on:
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: Primer mes (AAAA-MM)
+        default: '2023-01'
+      hasta:
+        description: Último mes (AAAA-MM)
+        default: '2026-10'
+
+permissions:
+  contents: read
+
+jobs:
+  meses:
+    runs-on: ubuntu-latest
+    outputs:
+      lista: ${{ steps.lista.outputs.lista }}
+    steps:
+      - id: lista
+        shell: python
+        env:
+          DESDE: ${{ inputs.desde }}
+          HASTA: ${{ inputs.hasta }}
+        run: |
+          import json, os
+          a, m = map(int, os.environ['DESDE'].split('-'))
+          fin = tuple(map(int, os.environ['HASTA'].split('-')))
+          meses = []
+          while (a, m) <= fin:
+              meses.append(f'{a}-{m:02d}')
+              a, m = (a + 1, 1) if m == 12 else (a, m + 1)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'lista={json.dumps(meses)}\n')
+
+  mes:
+    needs: meses
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        mes: ${{ fromJson(needs.meses.outputs.lista) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: scripts/requirements-rayos.txt
+
+      - name: Infrarrojo de ${{ matrix.mes }}
+        run: |
+          pip install -q -r scripts/requirements-rayos.txt
+          python analisis/infrarrojo_historial.py ${{ matrix.mes }} salida
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: infrarrojo-${{ matrix.mes }}
+          path: salida/
+          retention-days: 30
