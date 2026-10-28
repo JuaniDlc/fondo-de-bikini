@@ -85,7 +85,7 @@ Agrega `?debug=1` a la URL para comparar el modelo corregido, los ensambles sin 
 
 ## Modelo
 
-**Probabilidad principal: modelo corregido (MOS)** en `assets/mos.js`. Es una regresión logística entrenada con la lluvia que de verdad reportó el aeropuerto de Guayaquil (2023 a 2026). Usa como entrada los pronósticos de GFS, ECMWF e ICON, la hora, la época del año, el índice de El Niño y, si es de la hora actual, si está lloviendo en el aeropuerto. Responde dos preguntas: «¿llueve en esta hora?» (la hora en curso) y «¿llueve en algún momento de las próximas 6 horas?». Ambas usan si llovió en el aeropuerto en la última hora y en las últimas 3; para las horas siguientes hay un modelo por anticipación (1 a 6 h), porque ese efecto se va perdiendo. `analisis/verificar.py` compara lo que dijo la página con lo que de verdad llovió, y `analisis/experimentos.py` prueba variantes del modelo. La página muestra en grande la hora en curso y, en la tabla «Próximas horas», la probabilidad de cada una de las 6 horas siguientes. Los modelos `acum_1` … `acum_5` («¿llueve antes de T + k?») se calculan pero no se muestran; el de 6 h es la línea «En las próximas 6 horas». La evaluación completa está en [analisis/resultados.md](analisis/resultados.md).
+**Probabilidad principal: modelo corregido (MOS)** en `assets/mos.js`. Es una regresión logística entrenada con la lluvia que de verdad reportó el aeropuerto de Guayaquil (2023 a 2026). Usa como entrada los pronósticos de GFS, ECMWF e ICON, la hora, la época del año, el índice de El Niño y, si es de la hora actual, si está lloviendo en el aeropuerto. Responde dos preguntas: «¿llueve en esta hora?» (la hora en curso) y «¿llueve en algún momento de las próximas 6 horas?». Ambas usan si llovió en el aeropuerto en la última hora y en las últimas 3, y los rayos que vio el satélite GOES en la última hora (cuántos por anillo de distancia, el más cercano y si se acercan); para las horas siguientes hay un modelo por anticipación (1 a 6 h), porque ese efecto se va perdiendo. Los rayos los calcula `scripts/rayos.py` cada 10 minutos en `data/rayos.json` (`modelo`), con la misma muestra de archivos (el primero de cada minuto par) que se usó para entrenar; el historial lo arma el workflow manual «Historial de rayos» (`analisis/rayos_historial.py`). Si los rayos o el aeropuerto no son de la hora actual, se usa el modelo sin ellos. `analisis/verificar.py` compara lo que dijo la página con lo que de verdad llovió, y `analisis/experimentos.py` prueba variantes del modelo. La página muestra en grande la hora en curso y, en la tabla «Próximas horas», la probabilidad de cada una de las 6 horas siguientes. El modelo de 6 h solo se usa para los avisos. La evaluación completa está en [analisis/resultados.md](analisis/resultados.md).
 
 **Respaldo:** si no se puede calcular el modelo corregido, se usan los ensambles de ECMWF (51 simulaciones) y GFS (31) sin corregir, que exageran mucho la lluvia en Guayaquil. Si tampoco hay ensambles, se usa la heurística original (`assets/modelo.js`), que asume meses secos y subestima la lluvia en años de El Niño. Los tres valores se guardan en cada fila (`corregido`, `ensamble`, `heuristica`) para compararlos después.
 
@@ -103,6 +103,12 @@ python -m venv .venv
 
 ```bash
 .venv/Scripts/python analisis/descargar.py --forzar
+```
+
+Para los rayos, corre en GitHub **Actions → Historial de rayos → Run workflow** y baja los resultados a `analisis/datos/rayos/`:
+
+```bash
+gh run download <id de la corrida> -D analisis/datos/rayos
 ```
 
 ```bash

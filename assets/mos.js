@@ -13,6 +13,12 @@ const VENTANA = COEF.meta.ventana_h;
 export const MODELOS_MOS = { gfs: 'gfs_seamless', ecmwf: 'ecmwf_ifs025', icon: 'icon_seamless' };
 export const VARIABLES_MOS = ['precipitation', 'cape', 'relative_humidity_2m', 'cloud_cover'];
 
+/** Variables de rayos que escribe scripts/rayos.py en data/rayos.json (modelo). */
+export const VARIABLES_RAYOS = [
+  'rayos_15_1h', 'rayos_30_1h', 'rayos_60_1h', 'rayos_100_1h', 'rayos_150_1h',
+  'rayos_60_20m', 'cercania_20m', 'cercania_1h', 'acercamiento',
+];
+
 const esNumero = (v) => typeof v === 'number' && Number.isFinite(v);
 
 /** Valores de una columna en los índices [desde, hasta]; null si falta alguno. */
@@ -44,10 +50,9 @@ export function ninoVigente(nino, local) {
 
 /**
  * Variables de entrada para la hora con índice i de la respuesta horaria multimodelo.
- * Una variable vale null si faltan datos para calcularla. Las variables «de las próximas horas»
- * (_6h) miran ventana horas hacia adelante: 6, salvo en los modelos «¿llueve antes de i + k?».
+ * Una variable vale null si faltan datos para calcularla.
  */
-export function variablesMOS(hourly, i, { nino, aeropuerto, ventana = VENTANA } = {}) {
+export function variablesMOS(hourly, i, { nino, aeropuerto, rayos } = {}) {
   const local = hourly.time[i];
   const hora = Number(local.slice(11, 13));
   const dia = diaDelAno(local);
@@ -66,23 +71,35 @@ export function variablesMOS(hourly, i, { nino, aeropuerto, ventana = VENTANA } 
     lluvia_previa: aeropuerto?.lluvia_ahora ?? null,
     lluvia_previa_3h: aeropuerto?.lluvia_3h ?? null,
   };
+  // Rayos de la última hora (scripts/rayos.py), con el mismo criterio que el aeropuerto.
+  for (const nombre of VARIABLES_RAYOS) v[nombre] = rayos?.[nombre] ?? null;
+  const llueve2h = [];
   for (const [corto, modelo] of Object.entries(MODELOS_MOS)) {
     const col = `precipitation_${modelo}`;
     const ahora = tramo(hourly, col, i, i);
     const vecinas = tramo(hourly, col, i - 1, i + 1);
-    const prox = tramo(hourly, col, i + 1, i + ventana);
+    const prox = tramo(hourly, col, i + 1, i + VENTANA);
     v[`${corto}_mm`] = quizas(ahora, (xs) => Math.log1p(xs[0]));
     v[`${corto}_mm_vecinas`] = log1p(quizas(vecinas, max));
+    // Ventanas más anchas: los modelos suelen errar la hora de una tormenta por 1 a 3 horas.
+    const v2 = tramo(hourly, col, i - 2, i + 2);
+    v[`${corto}_mm_2h`] = log1p(quizas(v2, max));
+    v[`${corto}_mm_3h`] = log1p(quizas(tramo(hourly, col, i - 3, i + 3), max));
+    v[`${corto}_suma_2h`] = log1p(quizas(v2, suma));
+    llueve2h.push(quizas(v2, (xs) => (xs.some((x) => x >= UMBRAL_MM) ? 1 : 0)));
     v[`${corto}_mm_6h`] = log1p(quizas(prox, suma));
     v[`${corto}_max_6h`] = log1p(quizas(prox, max));
     v[`${corto}_llueve_6h`] = quizas(prox, (xs) => (xs.some((x) => x >= UMBRAL_MM) ? 1 : 0));
   }
   const cape = tramo(hourly, 'cape_gfs_seamless', i, i);
-  const capeProx = tramo(hourly, 'cape_gfs_seamless', i + 1, i + ventana);
+  const capeProx = tramo(hourly, 'cape_gfs_seamless', i + 1, i + VENTANA);
   const hum = tramo(hourly, 'relative_humidity_2m_gfs_seamless', i, i);
   const nubes = tramo(hourly, 'cloud_cover_gfs_seamless', i, i);
-  const nubesProx = tramo(hourly, 'cloud_cover_gfs_seamless', i + 1, i + ventana);
+  const nubesProx = tramo(hourly, 'cloud_cover_gfs_seamless', i + 1, i + VENTANA);
+  v.modelos_llueve_2h = llueve2h.includes(null) ? null : suma(llueve2h);
   v.cape = quizas(cape, (xs) => Math.log1p(xs[0]));
+  v.cape_2h = log1p(quizas(tramo(hourly, 'cape_gfs_seamless', i - 2, i + 2), max));
+  v.cape_icon_2h = log1p(quizas(tramo(hourly, 'cape_icon_seamless', i - 2, i + 2), max));
   v.cape_max_6h = log1p(quizas(capeProx, max));
   v.humedad = hum ? hum[0] : null;
   v.nubes = nubes ? nubes[0] : null;
@@ -104,6 +121,8 @@ export function aplicarMOS(nombre, variables) {
 
 /** Nombre del modelo de «la hora i» con el aeropuerto resumido hasta i − adelanto. */
 export const modeloPrevia = (adelanto) => (adelanto === 1 ? 'hora_con_metar' : `hora_con_metar_${adelanto}`);
+/** Igual, con los rayos de la hora antes de i − adelanto. */
+export const modeloRayos = (adelanto) => `hora_con_rayos_${adelanto}`;
 
 /**
  * Probabilidades del modelo corregido para la hora con índice i (la hora i acumula la lluvia
@@ -114,32 +133,18 @@ export const modeloPrevia = (adelanto) => (adelanto === 1 ? 'hora_con_metar' : `
 export function probabilidadesMOS(hourly, i, contexto = {}) {
   const v = variablesMOS(hourly, i, contexto);
   const adelanto = contexto.adelanto ?? 1;
-  const horaMetar = COEF[modeloPrevia(adelanto)] ? aplicarMOS(modeloPrevia(adelanto), v) : null;
+  const intentar = (nombre) => (COEF[nombre] ? aplicarMOS(nombre, v) : null);
+  const horaRayos = intentar(modeloRayos(adelanto));
+  const horaMetar = intentar(modeloPrevia(adelanto));
+  const seisRayos = intentar('6h_con_rayos');
   const seisMetar = aplicarMOS('6h_con_metar', v);
   return {
-    hora: horaMetar ?? aplicarMOS('hora', v),
-    horaUsaAeropuerto: horaMetar !== null,
-    proximas6h: seisMetar ?? aplicarMOS('6h', v),
-    usaAeropuerto: seisMetar !== null,
+    hora: horaRayos ?? horaMetar ?? aplicarMOS('hora', v),
+    horaUsaAeropuerto: (horaRayos ?? horaMetar) !== null,
+    horaUsaRayos: horaRayos !== null,
+    proximas6h: seisRayos ?? seisMetar ?? aplicarMOS('6h', v),
+    usaAeropuerto: (seisRayos ?? seisMetar) !== null,
+    usaRayos: seisRayos !== null,
   };
 }
 
-/** Nombre del modelo «¿llueve antes de i + k?» (k = 6 es el de las próximas 6 horas). */
-export const modeloAcumulado = (k, conAeropuerto) =>
-  (k === VENTANA ? (conAeropuerto ? '6h_con_metar' : '6h') : `acum_${k}${conAeropuerto ? '_con_metar' : ''}`);
-
-/**
- * Probabilidad de que llueva al menos una vez de i + 1 a i + k, para k = 1 … 6
- * (aeropuerto resumido hasta i, si lo hay). Cada valor es al menos el anterior.
- * @returns {number[] | null} null si falta algún dato
- */
-export function probabilidadesAcumuladas(hourly, i, contexto = {}) {
-  const out = [];
-  for (let k = 1; k <= VENTANA; k++) {
-    const v = variablesMOS(hourly, i, { ...contexto, ventana: k });
-    const p = aplicarMOS(modeloAcumulado(k, true), v) ?? aplicarMOS(modeloAcumulado(k, false), v);
-    if (p === null) return null;
-    out.push(Math.max(p, out.at(-1) ?? 0));
-  }
-  return out;
-}

@@ -26,6 +26,7 @@ const estado = {
   obtenido: null,    // cuándo se calcularon los datos en pantalla (ms)
   nino: null,        // índices de El Niño guardados por el workflow
   aeropuerto: null,  // último reporte del aeropuerto resumido por el workflow
+  rayos: null,       // rayos de la última hora (data/rayos.json, cada 10 minutos)
 };
 
 // ---------- formato ----------
@@ -108,8 +109,7 @@ function dibujar() {
   $('etiqueta').textContent = `Lluvia de ${horaCorta(inicio)} a ${horaCorta(fin)}`;
   $('prob').textContent = `${pHora} %`;
   $('frase').textContent = frase(pHora);
-  $('proximas').hidden = p6 === null;
-  if (p6 !== null) $('proximas').textContent = `En las próximas 6 horas: ${p6} %`;
+  $('proximas').hidden = true; // el dato de 6 h solo se usa para los avisos
   const aero = actual.aeropuerto;
   $('aeropuerto').hidden = !aero || aero.lluvia_ahora === null;
   if (aero && aero.lluvia_ahora !== null) {
@@ -152,13 +152,12 @@ function dibujar() {
  */
 function dibujarHoras() {
   const { actual } = estado;
-  const acum = actual.acumulada;
-  $('horas').hidden = !acum?.length;
-  if (!acum?.length) return;
-  const enEsaHora = new Map(estado.proyeccion.map((f) => [f.hora, f.probabilidad]));
-  enEsaHora.set(actual.horaLluvia, actual.probabilidad);
-  $('horas-filas').innerHTML = acum.map(({ hora }) => {
-    const p = enEsaHora.get(hora);
+  const filas = actual.horaLluvia
+    ? [{ hora: actual.horaLluvia, probabilidad: actual.probabilidad }, ...estado.proyeccion].slice(0, FUTURO_H)
+    : [];
+  $('horas').hidden = !filas.length;
+  if (!filas.length) return;
+  $('horas-filas').innerHTML = filas.map(({ hora, probabilidad: p }) => {
     const barra = (v, clase) => (v === undefined ? '—'
       : `<span class="celda"><span class="barra ${clase}"><span style="width:${Math.round(v)}%"></span></span><b>${Math.round(v)} %</b></span>`);
     const h = (local) => Number(local.slice(11, 13));
@@ -296,6 +295,10 @@ function dibujarDebug() {
   const filas = [
     ['Fuente: esta hora / 6 h', `${fuentes[actual.fuente]} / ${fuentes[actual.proximas6hFuente] ?? '—'}`],
     ['Usa el reporte del aeropuerto', actual.usaAeropuerto ? 'sí' : 'no'],
+    ['Usa los rayos del satélite (esta hora / 6 h)', `${actual.horaUsaRayos ? 'sí' : 'no'} / ${actual.usaRayos ? 'sí' : 'no'}`],
+    ['Rayos: más cercano en 20 min / acercándose', actual.rayos
+      ? `${actual.rayos.cercania_20m > 0 ? `${f(-30 * Math.log(actual.rayos.cercania_20m), 0)} km` : 'ninguno'} / ${f(actual.rayos.acercamiento, 2)}`
+      : '—'],
     ['Corregido: esta hora / 6 h (%)', `${f(actual.corregido, 1)} / ${actual.proximas6hFuente === 'corregido' ? f(actual.proximas6h, 1) : '—'}`],
     ['Ensambles sin corregir: esta hora / 6 h (%)', `${f(actual.ensamble, 1)} / ${f(actual.ensamble6h, 1)}`],
     ['ECMWF ahora / 6 h (%)', m ? `${f(m.ahora.ecmwf, 0)} / ${f(m.proximas6h.ecmwf, 0)}` : '—'],
@@ -350,10 +353,17 @@ async function actualizarAhora({ automatico = false } = {}) {
   msg.classList.remove('error');
   msg.textContent = 'Actualizando con el clima de este momento…';
   try {
-    // El reporte del aeropuerto solo lo puede leer el workflow; si es de esta hora, se reutiliza.
-    const datos = procesarRespuesta(await consultarOpenMeteo(), {
+    // El reporte del aeropuerto y los rayos solo los puede leer el workflow; se reutilizan si son
+    // de esta hora. Los rayos se actualizan cada 10 minutos, así que se vuelven a pedir.
+    const [respuesta, rayos] = await Promise.all([
+      consultarOpenMeteo(),
+      leerJSON('data/rayos.json').then((r) => r.modelo ?? null, () => estado.rayos),
+    ]);
+    estado.rayos = rayos;
+    const datos = procesarRespuesta(respuesta, {
       nino: estado.nino,
       aeropuerto: estado.aeropuerto,
+      rayos: estado.rayos,
     });
     estado.actual = datos.actual;
     estado.proyeccion = datos.proyeccion;

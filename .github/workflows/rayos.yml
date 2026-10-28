@@ -30,6 +30,7 @@ jobs:
           node-version: 22
 
       - name: Rayos cerca de Guayaquil (satélite GOES-19)
+        id: rayos
         run: |
           pip install -q -r scripts/requirements-rayos.txt
           python scripts/rayos.py
@@ -41,16 +42,19 @@ jobs:
           TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
         run: node scripts/avisar.mjs
 
-      # Solo se guarda algo cuando cambia el estado de los avisos, para no hacer un commit cada 10 minutos.
-      - name: Commit si cambió un aviso
+      # Solo se guarda algo cuando cambia el estado de los avisos o los rayos que usa el modelo
+      # (o empieza otra hora), para no hacer un commit cada 10 minutos.
+      - name: Commit si cambió un aviso o los rayos
+        env:
+          GUARDAR_RAYOS: ${{ steps.rayos.outputs.guardar }}
         run: |
-          if git diff --quiet data/alertas.json 2>/dev/null && git ls-files --error-unmatch data/alertas.json >/dev/null 2>&1; then
-            echo "Sin cambios en los avisos"
+          if [ "$GUARDAR_RAYOS" != "si" ] && git diff --quiet data/alertas.json 2>/dev/null && git ls-files --error-unmatch data/alertas.json >/dev/null 2>&1; then
+            echo "Sin cambios en los avisos ni en los rayos"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/alertas.json data/rayos.json
-          git commit -m "Aviso de rayos $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
+          git commit -m "Rayos $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
           exit 1

@@ -86,6 +86,81 @@ assert abs(heuristica(1011.0, np.nan, 24, 92, 12, 3) - 0.655597) < 1e-6
 
 # ---------- variables de entrada ----------
 
+ANILLOS_KM = (15, 30, 60, 100, 150)  # los mismos de scripts/rayos.py
+RAYOS = [f'rayos_{k}_1h' for k in ANILLOS_KM] + ['rayos_60_20m', 'cercania_20m', 'cercania_1h', 'acercamiento']
+MUESTRAS_HORA = 30  # archivos de la muestra en 60 minutos (uno cada 2 minutos)
+
+
+def variables_rayos(bloques: pd.DataFrame) -> pd.DataFrame:
+    """Variables de rayos a partir de bloques de 10 minutos (índice: inicio del bloque, hora local;
+    columnas archivos, r15 … r150, dmin). El resultado en la hora T resume los 60 minutos antes de T.
+    La misma cuenta hace scripts/rayos.py en vivo (y tests/rayos.test.mjs lo comprueba)."""
+    b = bloques.copy()
+    b['dmin'] = b['dmin'].fillna(1e6)  # sin rayos: muy lejos (rolling de pandas trata inf como faltante)
+    hora = b.rolling(6).sum()  # bloques de T − 60 a T − 10 → se asigna a T
+    reciente = b.rolling(2).sum()
+    dmin_1h = b['dmin'].rolling(6).min()
+    dmin_20m = b['dmin'].rolling(2).min()
+    dmin_antes = b['dmin'].shift(2).rolling(4).min()  # de T − 60 a T − 20
+    cerca = lambda d: np.exp(-d / 30)  # noqa: E731  1 encima, 0,37 a 30 km, 0 sin rayos
+    v = pd.DataFrame(index=b.index)
+    for k in ANILLOS_KM:
+        v[f'rayos_{k}_1h'] = np.log1p(hora[f'r{k}'])
+    v['rayos_60_20m'] = np.log1p(reciente[[f'r{k}' for k in ANILLOS_KM if k <= 60]].sum(axis=1))
+    v['cercania_20m'] = cerca(dmin_20m)
+    v['cercania_1h'] = cerca(dmin_1h)
+    v['acercamiento'] = cerca(dmin_20m) - cerca(dmin_antes)
+    v[hora['archivos'] < 0.8 * MUESTRAS_HORA] = np.nan  # faltan archivos: no se sabe
+    v.index = v.index + pd.Timedelta(minutes=10)
+    return v
+
+
+def bloques_rayos():
+    """Bloques de 10 minutos de analisis/datos/rayos/ (los escribe rayos_historial.py), en hora local."""
+    archivos = sorted((DATOS / 'rayos').glob('rayos-*.csv'))
+    if not archivos:
+        return None
+    b = pd.concat([pd.read_csv(a) for a in archivos])
+    b['bloque'] = pd.to_datetime(b['bloque'], utc=True).dt.tz_convert('America/Guayaquil').dt.tz_localize(None)
+    b = b.set_index('bloque').sort_index()
+    b = b[~b.index.duplicated()]
+    todos = pd.date_range(b.index.min(), b.index.max(), freq='10min')
+    b = b.reindex(todos)
+    b['archivos'] = b['archivos'].fillna(0)  # bloques sin archivos en el satélite
+    for k in ANILLOS_KM:
+        b[f'r{k}'] = b[f'r{k}'].fillna(0)
+    return b
+
+
+def rayos_por_hora():
+    """Variables de rayos por hora: en la hora T, los rayos de T − 60 min a T."""
+    b = bloques_rayos()
+    if b is None:
+        return None
+    v = variables_rayos(b)
+    v = v[v.index.minute == 0]
+    comprobar_rayos(b, v)
+    return v
+
+
+def comprobar_rayos(b, v):
+    """scripts/rayos.py (en vivo) debe calcular lo mismo que variables_rayos (entrenamiento)."""
+    import sys
+    sys.path.insert(0, str(AQUI.parent / 'scripts'))
+    from rayos import variables_modelo
+    con_rayos = v.index[v['cercania_20m'].fillna(0) > 0.2]
+    for t in list(con_rayos[:: max(1, len(con_rayos) // 20)]) + list(v.index[[100, 5000]]):
+        filas = b.loc[t - pd.Timedelta(minutes=60): t - pd.Timedelta(minutes=10)]
+        bloques = [{**{c: float(x) for c, x in fila.items() if c != 'dmin'},
+                    'dmin': float(fila['dmin']) if pd.notna(fila['dmin']) else np.inf} for _, fila in filas.iterrows()]
+        vivo = variables_modelo(bloques)
+        esperado = v.loc[t]
+        if vivo is None:
+            assert esperado.isna().all(), t
+            continue
+        for c in RAYOS:
+            assert abs(vivo[c] - esperado[c]) < 1e-5, (t, c, vivo[c], esperado[c])
+
 
 def cargar() -> pd.DataFrame:
     p = pd.read_csv(DATOS / 'pronosticos.csv', parse_dates=['time']).set_index('time')
@@ -121,6 +196,16 @@ def cargar() -> pd.DataFrame:
         df[f'{corto}_mm_6h'] = np.log1p(pr.rolling(VENTANA).sum().shift(-VENTANA))
         df[f'{corto}_max_6h'] = np.log1p(pr.rolling(VENTANA).max().shift(-VENTANA))
         df[f'{corto}_llueve_6h'] = llueve[corto].rolling(VENTANA).max().shift(-VENTANA)
+    # Ventanas más anchas alrededor de la hora: los modelos suelen errar la hora de una tormenta
+    # por 1 a 3 horas.
+    for corto, col in MODELOS.items():
+        pr = p[f'precipitation_{col}']
+        df[f'{corto}_mm_2h'] = np.log1p(pr.rolling(5, center=True).max())
+        df[f'{corto}_mm_3h'] = np.log1p(pr.rolling(7, center=True).max())
+        df[f'{corto}_suma_2h'] = np.log1p(pr.rolling(5, center=True).sum())
+    df['modelos_llueve_2h'] = sum(llueve[c].rolling(5, center=True).max() for c in MODELOS)
+    df['cape_2h'] = np.log1p(p['cape_gfs_seamless'].rolling(5, center=True).max())
+    df['cape_icon_2h'] = np.log1p(p['cape_icon_seamless'].rolling(5, center=True).max())
     df['crudo_hora'] = sum(llueve.values()) / len(llueve)
     df['crudo_6h'] = sum(df[f'{c}_llueve_6h'] for c in MODELOS) / len(MODELOS)
 
@@ -152,6 +237,10 @@ def cargar() -> pd.DataFrame:
     df['lluvia_previa'] = df['y_hora'].shift(1)
     df['lluvia_previa_3h'] = df['y_hora'].shift(1).rolling(3, min_periods=3).max()
 
+    r = rayos_por_hora()
+    if r is not None:
+        df = df.join(r)  # en la hora T: rayos de T − 60 min a T
+
     pres = p['pressure_msl_gfs_seamless']
     df['heuristica'] = heuristica(pres, pres.shift(3), p['temperature_2m_gfs_seamless'],
                                   p['relative_humidity_2m_gfs_seamless'], df['mes'], hora)
@@ -159,25 +248,10 @@ def cargar() -> pd.DataFrame:
 
 
 
-def columnas_ventana(df, p, k):
-    """Las variables «de las próximas horas» y el objetivo con una ventana de k horas en vez de 6,
-    para «¿llueve antes de T + k?». Con k = VENTANA son las mismas columnas de cargar()."""
-    out = {}
-    for corto, col in MODELOS.items():
-        pr = p[f'precipitation_{col}']
-        llueve = (pr >= UMBRAL_MM).where(pr.notna())
-        out[f'{corto}_mm_6h'] = np.log1p(pr.rolling(k).sum().shift(-k))
-        out[f'{corto}_max_6h'] = np.log1p(pr.rolling(k).max().shift(-k))
-        out[f'{corto}_llueve_6h'] = llueve.rolling(k).max().shift(-k)
-    out['cape_max_6h'] = np.log1p(p['cape_gfs_seamless'].rolling(k).max().shift(-k))
-    out['nubes_6h'] = p['cloud_cover_gfs_seamless'].rolling(k).mean().shift(-k)
-    out['y_6h'] = df['y_hora'].rolling(k, min_periods=k).max().shift(-k)
-    return out
-
 COMUNES = ['hora_sin', 'hora_cos', 'dia_sin', 'dia_cos', 'nino12', 'nino34']
 VARIABLES = {
-    'hora': COMUNES + [f'{c}_{s}' for c in MODELOS for s in ('mm', 'mm_vecinas')]
-    + ['cape', 'humedad', 'nubes'],
+    'hora': COMUNES + [f'{c}_{s}' for c in MODELOS for s in ('mm', 'mm_vecinas', 'mm_2h', 'mm_3h', 'suma_2h')]
+    + ['modelos_llueve_2h', 'cape', 'cape_2h', 'cape_icon_2h', 'humedad', 'nubes'],
     '6h': COMUNES + [f'{c}_{s}' for c in MODELOS for s in ('mm_6h', 'max_6h', 'llueve_6h')]
     + ['cape', 'cape_max_6h', 'humedad', 'nubes_6h'],
 }
@@ -224,8 +298,9 @@ METAR = {'hora': PREVIA, '6h': PERSISTENCIA}
 def entrenar(objetivo, df, extra=()):
     cols = VARIABLES[objetivo] + list(extra)
     y = f'y_{objetivo}'
-    # Todas las variantes de un objetivo usan las mismas horas: las que tienen reporte del aeropuerto.
-    requeridas = METAR[objetivo]
+    # Todas las variantes de un objetivo usan las mismas horas: las que tienen reporte del aeropuerto
+    # (y datos de rayos, si están descargados).
+    requeridas = METAR[objetivo] + [c for c in RAYOS if c in df]
     datos = df.dropna(subset=cols + requeridas + [y, f'crudo_{objetivo}'])
     tr, te = datos[datos.index < CORTE], datos[datos.index >= CORTE]
     log = make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000)).fit(tr[cols], tr[y])
@@ -235,6 +310,7 @@ def entrenar(objetivo, df, extra=()):
 
 
 CON_METAR = 'MOS logística + lluvia en el aeropuerto (METAR)'
+CON_RAYOS = 'MOS logística + aeropuerto + rayos del satélite'
 
 
 def climatologia(tr, te, y):
@@ -256,7 +332,9 @@ def main():
 
     for objetivo, titulo in (('hora', '¿Llueve en esta hora?'), ('6h', '¿Llueve en las próximas 6 horas?')):
         y = f'y_{objetivo}'
-        cols, tr, te, log, gb = entrenar(objetivo, df)
+        # «La hora T» usa el aeropuerto y los rayos hasta T − 1; «6 h desde T», hasta T.
+        base = previas(df, 1) if objetivo == 'hora' else df
+        cols, tr, te, log, gb = entrenar(objetivo, base)
         yt = te[y].to_numpy()
         clim = climatologia(tr, te, y)
         brier_clim = brier_score_loss(yt, clim)
@@ -269,9 +347,13 @@ def main():
         if objetivo == 'hora':
             candidatos = {'Heurística actual': te['heuristica'].to_numpy(), **candidatos}
         # Variante que sabe si llovió en el aeropuerto justo antes (requiere el METAR en vivo).
-        cols_p, _, te_p, log_p, _ = entrenar(objetivo, df, extra=METAR[objetivo])
+        cols_p, _, te_p, log_p, _ = entrenar(objetivo, base, extra=METAR[objetivo])
         assert te_p.index.equals(te.index)
         candidatos[CON_METAR] = log_p.predict_proba(te_p[cols_p])[:, 1]
+        if 'rayos_150_1h' in df:
+            cols_r, _, te_r, log_r, _ = entrenar(objetivo, base, extra=METAR[objetivo] + RAYOS)
+            assert te_r.index.equals(te.index)
+            candidatos[CON_RAYOS] = log_r.predict_proba(te_r[cols_r])[:, 1]
 
         informe += [f'## {titulo}', '',
                     f'Horas de prueba: {len(te):,}. Llovió en el {pct(yt.mean())} de ellas '
@@ -282,13 +364,15 @@ def main():
             m = metricas(yt, p, brier_clim)
             informe.append(f"| {nombre} | {m['brier']:.3f} | {m['mejora'] * 100:+.0f} % | {m['auc']:.2f} |")
 
-        mejor = CON_METAR  # el que usa la página
+        mejor = CON_RAYOS if CON_RAYOS in candidatos else CON_METAR  # el que usa la página
         p = candidatos[mejor]
         informe += ['', f'**Calibración de «{mejor}»** (cuando dice X %, ¿cuánto llovió?):', '',
                     '| Pronóstico | Horas | Promedio pronosticado | Llovió de verdad |', '|---|---|---|---|']
         informe += [f"| {f['rango']} | {f['horas']:,} | {pct(f['pronostico'])} | {pct(f['llovio'])} |"
                     for f in tabla_calibracion(yt, p)]
-        for nombre in ('MOS: regresión logística', CON_METAR):
+        for nombre in ('MOS: regresión logística', CON_METAR, CON_RAYOS):
+            if nombre not in candidatos:
+                continue
             informe += ['', f'**Si se usara como alerta** («{nombre}»):', '',
                         '| Alerta cuando dice ≥ | Avisos por mes | Cuando alerta, llueve | Lluvias que detecta |',
                         '|---|---|---|---|']
@@ -297,7 +381,7 @@ def main():
 
         # Por temporada y en el mes actual
         informe += ['', '**Por periodo** (mejora sobre climatología; AUC):', '',
-                    '| Periodo | Horas | Llovió | Modelos crudos | MOS con METAR |', '|---|---|---|---|---|']
+                    '| Periodo | Horas | Llovió | Modelos crudos | Modelo de la página |', '|---|---|---|---|---|']
         periodos = {
             'Temporada lluviosa (ene–abr)': te['mes'].between(1, 4).to_numpy(),
             'Temporada seca (may–dic)': ~te['mes'].between(1, 4).to_numpy(),
@@ -312,38 +396,10 @@ def main():
             informe.append(f"| {nombre} | {sel.sum():,} | {pct(yt[sel].mean())} | "
                            f"{c['mejora'] * 100:+.0f} %; {c['auc']:.2f} | {m['mejora'] * 100:+.0f} %; {m['auc']:.2f} |")
         informe.append('')
-    informe += acumulada(df, pron)
     (AQUI / 'resultados.md').write_text('\n'.join(informe), encoding='utf-8')
     print('\n'.join(informe))
     exportar_produccion(df, pron)
 
-
-ACUMULADAS = range(1, VENTANA + 1)
-
-
-def acumulada(df, pron):
-    """Evalúa «¿llueve antes de T + k?» (de T + 1 a T + k) para k = 1 … 6, con y sin el aeropuerto."""
-    lineas = ['## ¿Llueve antes de cierta hora? (acumulada)', '',
-              'Probabilidad de que llueva al menos una vez desde ahora hasta k horas después. '
-              'Es la que muestra la página en la tabla hora por hora.', '',
-              '| Hasta | Llovió | Climatología (Brier) | MOS (Brier; mejora; AUC) | MOS + aeropuerto (Brier; mejora; AUC) |',
-              '|---|---|---|---|---|']
-    for k in ACUMULADAS:
-        d = df.assign(**columnas_ventana(df, pron, k))
-        cols = VARIABLES['6h']
-        datos = d.dropna(subset=cols + PERSISTENCIA + ['y_6h'])
-        tr, te = datos[datos.index < CORTE], datos[datos.index >= CORTE]
-        yt = te['y_6h'].to_numpy()
-        clim = climatologia(tr, te, 'y_6h')
-        bc = brier_score_loss(yt, clim)
-        celdas = []
-        for extra in ([], PERSISTENCIA):
-            pipe = make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000))
-            pipe.fit(tr[cols + extra], tr['y_6h'])
-            m = metricas(yt, pipe.predict_proba(te[cols + extra])[:, 1], bc)
-            celdas.append(f"{m['brier']:.3f}; {m['mejora'] * 100:+.0f} %; {m['auc']:.2f}")
-        lineas.append(f'| {k} h | {pct(yt.mean())} | {bc:.3f} | {celdas[0]} | {celdas[1]} |')
-    return lineas + ['']
 
 # ---------- modelo para la página ----------
 
@@ -352,6 +408,7 @@ COLUMNAS_FIXTURE = {
     'precipitation_ecmwf_ifs025': 'precipitation_ecmwf',  # en vivo solo existe ifs025
     'precipitation_icon_seamless': 'precipitation_icon_seamless',
     'cape_gfs_seamless': 'cape_gfs_seamless',
+    'cape_icon_seamless': 'cape_icon_seamless',
     'relative_humidity_2m_gfs_seamless': 'relative_humidity_2m_gfs_seamless',
     'cloud_cover_gfs_seamless': 'cloud_cover_gfs_seamless',
 }
@@ -362,6 +419,17 @@ ADELANTOS = range(1, 7)
 
 def nombre_previa(k):
     return 'hora_con_metar' if k == 1 else f'hora_con_metar_{k}'
+
+
+def previas(df, k):
+    """Para «la hora T» con k horas de anticipación: el aeropuerto y los rayos hasta T − k."""
+    d = df.copy()
+    d['lluvia_previa'] = d['y_hora'].shift(k)
+    d['lluvia_previa_3h'] = d['y_hora'].shift(k).rolling(3, min_periods=3).max()
+    for c in RAYOS:
+        if c in d:
+            d[c] = df[c].shift(k)
+    return d
 
 
 def exportar_produccion(df, p):
@@ -380,19 +448,16 @@ def exportar_produccion(df, p):
     ajustar('hora', df, VARIABLES['hora'], 'y_hora')
     ajustar('6h', df, VARIABLES['6h'], 'y_6h')
     ajustar('6h_con_metar', df, VARIABLES['6h'] + PERSISTENCIA, 'y_6h')
-    # «La hora T» con la lluvia del aeropuerto de k horas antes: un modelo por anticipación,
-    # porque el efecto de «está lloviendo» se va perdiendo con las horas.
+    con_rayos = 'rayos_150_1h' in df
+    if con_rayos:
+        ajustar('6h_con_rayos', df, VARIABLES['6h'] + PERSISTENCIA + RAYOS, 'y_6h')
+    # «La hora T» con la lluvia del aeropuerto (y los rayos) de k horas antes: un modelo por
+    # anticipación, porque el efecto de «está lloviendo» se va perdiendo con las horas.
     for k in ADELANTOS:
-        d = df.copy()
-        d['lluvia_previa'] = d['y_hora'].shift(k)
-        d['lluvia_previa_3h'] = d['y_hora'].shift(k).rolling(3, min_periods=3).max()
+        d = previas(df, k)
         ajustar(nombre_previa(k), d, VARIABLES['hora'] + PREVIA, 'y_hora')
-
-    # «¿Llueve antes de T + k?», con y sin el aeropuerto (k = 6 es el modelo de 6 h).
-    for k in ACUMULADAS[:-1]:
-        d = df.assign(**columnas_ventana(df, p, k))
-        ajustar(f'acum_{k}', d, VARIABLES['6h'], 'y_6h')
-        ajustar(f'acum_{k}_con_metar', d, VARIABLES['6h'] + PERSISTENCIA, 'y_6h')
+        if con_rayos:
+            ajustar(f'hora_con_rayos_{k}', d, VARIABLES['hora'] + PREVIA + RAYOS, 'y_hora')
 
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
@@ -409,9 +474,11 @@ def exportar_produccion(df, p):
         comunes = comunes.intersection(datos.index)
     elegidas = list(pd.Series(comunes).sample(5, random_state=7))
     elegidas.append(datos6.loc[comunes, 'lluvia_ahora'].idxmax())  # una con lluvia en el aeropuerto
+    if con_rayos:
+        elegidas.append(datos6.loc[comunes, 'cercania_20m'].idxmax())  # una con rayos encima
     casos = []
     for t in elegidas:
-        ventana = p.loc[t - pd.Timedelta(hours=2): t + pd.Timedelta(hours=VENTANA + 1)]
+        ventana = p.loc[t - pd.Timedelta(hours=4): t + pd.Timedelta(hours=VENTANA + 1)]
         hourly = {'time': [x.strftime('%Y-%m-%dT%H:%M') for x in ventana.index]}
         for clave, col in COLUMNAS_FIXTURE.items():
             hourly[clave] = [None if pd.isna(v) else float(v) for v in ventana[col]]
@@ -431,6 +498,10 @@ def exportar_produccion(df, p):
                 str(k): {'lluvia_ahora': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa']),
                          'lluvia_3h': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa_3h'])}
                 for k in ADELANTOS},
+            # Rayos de la hora antes de T (6 h) y de la hora antes de T − k (la hora T)
+            **({'rayos': {c: float(df.loc[t, c]) for c in RAYOS},
+                'rayos_previo': {str(k): {c: float(previas(df, k).loc[t, c]) for c in RAYOS} for k in ADELANTOS}}
+               if con_rayos else {}),
             'esperado': esperado,
         })
     destino = raiz / 'tests' / 'fixtures'

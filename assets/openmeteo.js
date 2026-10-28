@@ -7,7 +7,7 @@
 // Los tres valores se guardan para poder compararlos.
 
 import { calcular } from './modelo.js';
-import { MODELOS_MOS, VARIABLES_MOS, probabilidadesAcumuladas, probabilidadesMOS } from './mos.js';
+import { MODELOS_MOS, VARIABLES_MOS, probabilidadesMOS } from './mos.js';
 
 export const GUAYAQUIL = { lat: -2.19, lon: -79.89 };
 export const ZONA = 'America/Guayaquil';
@@ -30,7 +30,8 @@ function consulta(extra) {
   return new URLSearchParams({
     latitude: GUAYAQUIL.lat,
     longitude: GUAYAQUIL.lon,
-    past_hours: 24,
+    // 24 horas para la gráfica y 3 más para las ventanas del modelo corregido.
+    past_hours: 27,
     // La hora en curso cuenta como la primera de forecast_hours: 13 deja 12 horas por delante.
     forecast_hours: 13,
     timezone: ZONA,
@@ -206,13 +207,16 @@ function fila(hora, T, HR, P, P3, series, modelos, contexto) {
  *   que en Open-Meteo se llama T0 + 1) y proximas6h la de las 6 horas desde T0
  * - pasado: las horas ya terminadas (hasta T0), calculadas con los datos horarios
  * - proyeccion: las horas siguientes a la hora en curso, calculadas con el pronóstico
- * - actual.acumulada: para cada una de las 6 horas desde T0, la probabilidad de que llueva
- *   al menos una vez hasta el final de esa hora ({hora, probabilidad}, hora como en Open-Meteo)
  *
  * contexto.nino: índices semanales de El Niño; contexto.aeropuerto: lluvia reportada en
- * SEGU hasta T0 ({hora, lluvia_ahora, lluvia_3h}), que solo se usa si es de T0.
+ * SEGU hasta T0 ({hora, lluvia_ahora, lluvia_3h}), que solo se usa si es de T0;
+ * contexto.rayos: rayos de la última hora (data/rayos.json → modelo, con «hasta» en hora local),
+ * que solo se usan si terminan entre T0 − 20 min y T0 + 1 h (se entrenó con la hora antes de T0).
  */
-export function procesarRespuesta({ clima, modelos = null, ensamble = null }, { nino = null, aeropuerto = null } = {}) {
+export function procesarRespuesta(
+  { clima, modelos = null, ensamble = null },
+  { nino = null, aeropuerto = null, rayos = null } = {},
+) {
   const series = ensamble ? seriesEnsamble(ensamble) : null;
   const h = clima.hourly;
   const porHora = new Map(h.time.map((t, i) => [t, i]));
@@ -227,7 +231,9 @@ export function procesarRespuesta({ clima, modelos = null, ensamble = null }, { 
   const horaLluvia = sumarHoras(horaActual, 1); // la hora en curso
   const P3 = presionEn(sumarHoras(horaActual, -3));
   const aeropuertoVigente = aeropuerto && aeropuerto.hora === horaActual ? aeropuerto : null;
-  const contextoAhora = { nino, aeropuerto: aeropuertoVigente };
+  const desfaseRayos = rayos?.hasta ? horasEntre(horaActual, rayos.hasta) : NaN;
+  const rayosVigentes = desfaseRayos >= -1 / 3 && desfaseRayos <= 1 ? rayos : null;
+  const contextoAhora = { nino, aeropuerto: aeropuertoVigente, rayos: rayosVigentes };
   // Condiciones de ahora y «próximas 6 h» (desde T0, con el aeropuerto hasta T0)
   const { ens, mos, ...filaActual } = fila(
     horaActual, c.temperature_2m, c.relative_humidity_2m, c.pressure_msl, P3, series, modelos, contextoAhora,
@@ -253,12 +259,15 @@ export function procesarRespuesta({ clima, modelos = null, ensamble = null }, { 
     corregido: pct(mosSig?.hora),
     ensamble: pct(ensSig?.probabilidad),
     horaUsaAeropuerto: Boolean(mosSig?.horaUsaAeropuerto),
+    horaUsaRayos: Boolean(mosSig?.horaUsaRayos),
     momento: c.time,
     presion3h: P3,
     proximas6h: pct(p6),
     proximas6hFuente: fuente6h,
     usaAeropuerto: Boolean(mos?.usaAeropuerto),
+    usaRayos: Boolean(mos?.usaRayos),
     aeropuerto: aeropuertoVigente,
+    rayos: rayosVigentes,
     ensamble6h: pct(ens?.ventana),
     modelos: ens ? {
       ahora: Object.fromEntries(Object.entries(ens.modelos).map(([k, v]) => [k, pct(v)])),
@@ -285,25 +294,6 @@ export function procesarRespuesta({ clima, modelos = null, ensamble = null }, { 
     if (actual.fuente === 'corregido' && f.fuente !== 'corregido') return;
     (hora < horaLluvia ? pasado : proyeccion).push(f);
   });
-
-  // «¿Llueve antes de…?»: nunca menos que la probabilidad de cada hora de la ventana.
-  const iAhora = modelos ? modelos.hourly.time.indexOf(horaActual) : -1;
-  const acum = actual.fuente === 'corregido' && iAhora >= 0
-    ? probabilidadesAcumuladas(modelos.hourly, iAhora, contextoAhora) : null;
-  if (acum) {
-    const porHora = proyeccion;
-    let previo = 0;
-    actual.acumulada = acum.map((p, k) => {
-      const hora = sumarHoras(horaActual, k + 1);
-      // La primera es la misma pregunta que «esta hora»: se usa ese valor para que coincidan.
-      if (hora === horaLluvia) previo = actual.probabilidad;
-      else previo = Math.max(pct(p), porHora.find((f) => f.hora === hora)?.probabilidad ?? 0, previo);
-      return { hora, probabilidad: previo };
-    });
-    actual.proximas6h = actual.acumulada.at(-1).probabilidad;
-  } else {
-    actual.acumulada = null;
-  }
 
   return { actual, pasado, proyeccion };
 }

@@ -18,7 +18,7 @@ async function leerJSON(nombre, porDefecto) {
   }
 }
 
-const sinDetalle = ({ detalle, momento, presion3h, modelos, acumulada, ...resto }) => resto;
+const sinDetalle = ({ detalle, momento, presion3h, modelos, ...resto }) => resto;
 
 async function intentar(nombre, f, porDefecto) {
   try {
@@ -38,7 +38,9 @@ const nino = ninoNuevo ? ninoNuevo.slice(-SEMANAS_NINO) : await leerJSON('nino.j
 const horaActual = `${respuesta.clima.current.time.slice(0, 13)}:00`;
 const aeropuerto = await intentar('Aeropuerto', () => consultarAeropuerto(horaActual), null);
 
-const { actual, pasado, proyeccion } = procesarRespuesta(respuesta, { nino, aeropuerto });
+// Rayos de la última hora: los escribe scripts/rayos.py, que corre justo antes en el workflow.
+const rayos = (await leerJSON('rayos.json', null))?.modelo ?? null;
+const { actual, pasado, proyeccion } = procesarRespuesta(respuesta, { nino, aeropuerto, rayos });
 
 // Historial: una fila por hora. La lectura de esta hora reemplaza a la que hubiera;
 // las horas pasadas que falten (primer uso, ejecuciones atrasadas) se rellenan con
@@ -74,7 +76,7 @@ await writeFile(
 console.log(
   `${actual.hora} · esta hora ${actual.probabilidad} % (${actual.fuente}) · ` +
     `próximas 6 h ${actual.proximas6h ?? '—'} % (${actual.proximas6hFuente}` +
-    `${actual.usaAeropuerto ? ', con aeropuerto' : ''}) · ensamble ${actual.ensamble ?? '—'} % · ` +
+    `${actual.usaAeropuerto ? ', con aeropuerto' : ''}${actual.usaRayos ? ' y rayos' : ''}) · ensamble ${actual.ensamble ?? '—'} % · ` +
     `heurística ${actual.heuristica} % · aeropuerto: ${aeropuerto ? (aeropuerto.lluvia_ahora ? 'lloviendo' : 'sin lluvia') : 'sin dato'} · ` +
     `El Niño 1+2: ${nino?.at(-1)?.nino12 ?? '—'} °C · ${actual.temperatura} °C · ` +
     `${actual.humedad} % · ${actual.presion} hPa · historial: ${filas.length} filas`,
