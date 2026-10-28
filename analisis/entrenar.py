@@ -91,7 +91,7 @@ RAYOS = [f'rayos_{k}_1h' for k in ANILLOS_KM] + ['rayos_60_20m', 'cercania_20m',
 ARCHIVOS_HORA = 180  # archivos de rayos en 60 minutos (uno cada 20 s)
 
 
-def variables_rayos(bloques: pd.DataFrame) -> pd.DataFrame:
+def variables_rayos(bloques: pd.DataFrame, archivos_hora=ARCHIVOS_HORA) -> pd.DataFrame:
     """Variables de rayos a partir de bloques de 10 minutos (índice: inicio del bloque, hora local;
     columnas archivos, r15 … r150, dmin). El resultado en la hora T resume los 60 minutos antes de T.
     La misma cuenta hace scripts/rayos.py en vivo (y tests/rayos.test.mjs lo comprueba)."""
@@ -110,14 +110,14 @@ def variables_rayos(bloques: pd.DataFrame) -> pd.DataFrame:
     v['cercania_20m'] = cerca(dmin_20m)
     v['cercania_1h'] = cerca(dmin_1h)
     v['acercamiento'] = cerca(dmin_20m) - cerca(dmin_antes)
-    v[hora['archivos'] < 0.8 * ARCHIVOS_HORA] = np.nan  # faltan archivos: no se sabe
+    v[hora['archivos'] < 0.8 * archivos_hora] = np.nan  # faltan archivos: no se sabe
     v.index = v.index + pd.Timedelta(minutes=10)
     return v
 
 
-def bloques_rayos():
+def bloques_rayos(carpeta=DATOS / 'rayos'):
     """Bloques de 10 minutos de analisis/datos/rayos/ (los escribe rayos_historial.py), en hora local."""
-    archivos = sorted((DATOS / 'rayos').glob('rayos-*.csv'))
+    archivos = sorted(carpeta.glob('rayos-*.csv'))
     if not archivos:
         return None
     b = pd.concat([pd.read_csv(a) for a in archivos])
