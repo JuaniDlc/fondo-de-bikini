@@ -123,7 +123,7 @@ function dibujar() {
   // Aviso sobre la hora más probable de la tabla
   const mayor = proximasHoras().reduce((a, b) => (b.probabilidad > a.probabilidad ? b : a), { probabilidad: pHora });
   const pMayor = Math.round(mayor.probabilidad);
-  const cuando = mayor.hora ? ` entre las ${rangoHora(mayor.hora)} (${pMayor} %)` : ` (${pMayor} %)`;
+  const cuando = mayor.hora ? ` entre ${rangoHora(mayor.hora)} (${pMayor} %)` : ` (${pMayor} %)`;
   const aviso = $('aviso');
   aviso.hidden = pMayor < UMBRAL_ATENCION;
   if (pMayor >= UMBRAL_PRECAUCION) {
@@ -156,10 +156,10 @@ function proximasHoras() {
     : [];
 }
 
-/** «22 y las 23 h» para la fila de Open-Meteo de las 23:00 (lluvia de 22:00 a 23:00). */
+/** «las 22 y las 23 h» para la fila de Open-Meteo de las 23:00 (lluvia de 22:00 a 23:00). */
 function rangoHora(hora) {
-  const h = (local) => Number(local.slice(11, 13));
-  return `${h(sumarHoras(hora, -1))} y las ${h(hora)} h`;
+  const las = (local) => { const h = Number(local.slice(11, 13)); return h === 1 ? 'la 1' : `las ${h}`; };
+  return `${las(sumarHoras(hora, -1))} y ${las(hora)} h`;
 }
 
 function dibujarHoras() {

@@ -1,15 +1,17 @@
 // Decide cuándo mandar un aviso (Telegram, WhatsApp), sin repetir el mismo aviso una y otra vez.
 //
 // Dos avisos independientes, cada uno con su mensaje de cierre:
-// - lluvia: el modelo corregido da ≥ 80 % de lluvia en las próximas 6 horas. Cuando baja de
-//   60 %, avisa que bajó el riesgo y se rearma (así no llega un mensaje cada hora).
+// - lluvia: alguna de las próximas 6 horas de la tabla de la página (la en curso y las 5
+//   siguientes) llega a 70 % en el modelo corregido. Cuando todas bajan de 50 %, avisa que bajó
+//   el riesgo y se rearma (así no llega un mensaje cada hora).
 // - rayos: el satélite ve una tormenta eléctrica a menos de 60 km. Avisa al aparecer y si se
 //   acerca a menos de 25 km; como mucho un aviso de rayos por hora. Si avisó, avisa también
 //   cuando lleva 30 minutos sin rayos cerca.
 
 export const PAGINA = 'https://juanidlc.github.io/fondo-de-bikini/';
-export const LLUVIA_ACTIVA = 80;
-export const LLUVIA_DESACTIVA = 60;
+export const LLUVIA_ACTIVA = 70;
+export const LLUVIA_DESACTIVA = 50;
+const HORAS_LLUVIA = 6;
 export const RAYOS_MINIMOS = 3; // menos que esto puede ser ruido del sensor
 export const ESPERA_RAYOS_MIN = 60;
 export const REPETIR_RAYOS_MIN = 120; // tormenta que sigue activa: se recuerda cada 2 horas
@@ -42,15 +44,14 @@ export function decidir(estado, actual, rayos, ahora = Date.now()) {
   const mensajes = [];
 
   // Lluvia (solo con una lectura reciente del modelo corregido)
-  const p6 = actual?.proximas6hFuente === 'corregido' && actual.generado
-    && minutosDesde(actual.generado, ahora) <= VIGENCIA_ACTUAL_MIN ? actual.proximas6h : null;
-  if (p6 !== null && p6 !== undefined) {
-    if (!nuevo.lluvia.activa && p6 >= LLUVIA_ACTIVA) {
+  const mayor = horaMasProbable(actual, ahora);
+  if (mayor) {
+    if (!nuevo.lluvia.activa && mayor.probabilidad >= LLUVIA_ACTIVA) {
       nuevo.lluvia = { activa: true, enviado: new Date(ahora).toISOString() };
-      mensajes.push(mensajeLluvia(p6, actual));
-    } else if (nuevo.lluvia.activa && p6 < LLUVIA_DESACTIVA) {
+      mensajes.push(mensajeLluvia(mayor, actual));
+    } else if (nuevo.lluvia.activa && mayor.probabilidad < LLUVIA_DESACTIVA) {
       nuevo.lluvia.activa = false;
-      mensajes.push(mensajeLluviaFin(p6));
+      mensajes.push(mensajeLluviaFin(mayor));
     }
   }
 
@@ -81,15 +82,34 @@ export function decidir(estado, actual, rayos, ahora = Date.now()) {
   return { mensajes, estado: nuevo };
 }
 
-export function mensajeLluvia(p6, actual) {
-  const aero = actual?.aeropuerto?.lluvia_ahora === 1 ? ' Ya está lloviendo en el aeropuerto.' : '';
-  return `🌧️ Lluvia en Fondo de Bikini: ${Math.round(p6)} % de probabilidad de lluvia en Guayaquil `
-    + `en las próximas 6 horas.${aero} Lleva paraguas. ${PAGINA}`;
+/**
+ * La hora más probable de las próximas HORAS_LLUVIA (la en curso y las siguientes), como en la
+ * tabla de la página; null si la lectura es vieja o no es del modelo corregido.
+ * Las horas son de Open-Meteo: la de las 23:00 es la lluvia de 22:00 a 23:00.
+ */
+export function horaMasProbable(actual, ahora) {
+  if (!actual?.generado || minutosDesde(actual.generado, ahora) > VIGENCIA_ACTUAL_MIN) return null;
+  if (actual.fuente !== 'corregido' || !actual.horaLluvia) return null;
+  const enHoras = (local) => Date.parse(`${local}:00Z`) / 3600000; // horas locales, para restar
+  const horas = [{ hora: actual.horaLluvia, probabilidad: actual.probabilidad }, ...(actual.proyeccion ?? [])]
+    .filter((f) => enHoras(f.hora) - enHoras(actual.horaLluvia) < HORAS_LLUVIA)
+    .filter((f) => typeof f.probabilidad === 'number');
+  return horas.reduce((a, b) => (b.probabilidad > a.probabilidad ? b : a));
 }
 
-export function mensajeLluviaFin(p6) {
-  return `✅ Bajó el riesgo de lluvia en Guayaquil: ahora ${Math.round(p6)} % de probabilidad `
-    + `en las próximas 6 horas. ${PAGINA}`;
+const hora = (local) => Number(local.slice(11, 13));
+const las = (h) => (h === 1 ? 'la 1' : `las ${h}`);
+const rango = (local) => `entre ${las((hora(local) + 23) % 24)} y ${las(hora(local))} h`;
+
+export function mensajeLluvia(mayor, actual) {
+  const aero = actual?.aeropuerto?.lluvia_ahora === 1 ? ' Ya está lloviendo en el aeropuerto.' : '';
+  return `🌧️ Lluvia en Fondo de Bikini: ${Math.round(mayor.probabilidad)} % de probabilidad de lluvia `
+    + `en Guayaquil ${rango(mayor.hora)}.${aero} Lleva paraguas. ${PAGINA}`;
+}
+
+export function mensajeLluviaFin(mayor) {
+  return `✅ Bajó el riesgo de lluvia en Guayaquil: ninguna de las próximas ${HORAS_LLUVIA} horas `
+    + `pasa de ${Math.round(mayor.probabilidad)} %. ${PAGINA}`;
 }
 
 export function mensajeRayosFin() {

@@ -7,32 +7,43 @@ import { leerDestinos } from '../scripts/whatsapp.mjs';
 const T0 = Date.parse('2026-10-26T04:00:00Z');
 const min = (m) => T0 + m * 60000;
 const iso = (t) => new Date(t).toISOString();
-const actual = (p6, t = T0) => ({ generado: iso(t), proximas6h: p6, proximas6hFuente: 'corregido' });
+// Lectura con la hora en curso (de 22 a 23 h) y las siguientes; p es la más probable, a las 0 h.
+const actual = (p, t = T0) => ({
+  generado: iso(t),
+  fuente: 'corregido',
+  horaLluvia: '2026-10-25T23:00',
+  probabilidad: Math.min(p, 20),
+  proyeccion: [
+    { hora: '2026-10-26T00:00', probabilidad: p },
+    { hora: '2026-10-26T01:00', probabilidad: p / 2 },
+    { hora: '2026-10-26T05:00', probabilidad: 99 }, // fuera de las próximas 6 horas
+  ],
+});
 const rayos = (n, km, t = T0) => ({ generado: iso(t), minutos: 10, rayos: n, mas_cercano_km: km, rumbo: 'noreste' });
 
-test('lluvia: avisa al llegar a 80 %, no repite, y rearma bajo 60 %', () => {
+test('lluvia: avisa cuando una hora llega a 70 %, no repite, y rearma bajo 50 %', () => {
   let r = decidir(estadoInicial(), actual(53), null, T0);
   assert.equal(r.mensajes.length, 0);
-  r = decidir(r.estado, actual(85, min(60)), null, min(60));
+  r = decidir(r.estado, actual(75, min(60)), null, min(60));
   assert.equal(r.mensajes.length, 1);
-  assert.match(r.mensajes[0], /85 %/);
+  assert.match(r.mensajes[0], /75 % de probabilidad de lluvia en Guayaquil entre las 23 y las 0 h/);
   r = decidir(r.estado, actual(90, min(120)), null, min(120)); // sigue alto: no repite
   assert.equal(r.mensajes.length, 0);
-  r = decidir(r.estado, actual(70, min(180)), null, min(180)); // entre 60 y 80: sigue activa
+  r = decidir(r.estado, actual(60, min(180)), null, min(180)); // entre 50 y 70: sigue activa
   assert.equal(r.estado.lluvia.activa, true);
   r = decidir(r.estado, actual(40, min(240)), null, min(240)); // bajó: avisa y se rearma
   assert.equal(r.estado.lluvia.activa, false);
   assert.equal(r.mensajes.length, 1);
-  assert.match(r.mensajes[0], /Bajó el riesgo de lluvia.*40 %/);
+  assert.match(r.mensajes[0], /Bajó el riesgo de lluvia.*pasa de 40 %/);
   r = decidir(r.estado, actual(30, min(270)), null, min(270)); // sigue bajo: no repite el cierre
   assert.equal(r.mensajes.length, 0);
-  r = decidir(r.estado, actual(82, min(300)), null, min(300));
+  r = decidir(r.estado, actual(72, min(300)), null, min(300));
   assert.equal(r.mensajes.length, 1);
 });
 
 test('lluvia: ignora lecturas viejas o que no son del modelo corregido', () => {
   assert.equal(decidir(estadoInicial(), actual(95, min(-180)), null, T0).mensajes.length, 0);
-  const ens = { ...actual(95), proximas6hFuente: 'ensamble' };
+  const ens = { ...actual(95), fuente: 'ensamble' };
   assert.equal(decidir(estadoInicial(), ens, null, T0).mensajes.length, 0);
 });
 
@@ -55,7 +66,7 @@ test('rayos: avisa al aparecer y al acercarse, como mucho uno por hora', () => {
   assert.equal(r.mensajes.length, 1);
 });
 
-test('lluvia: sin aviso previo, bajar de 60 % no manda nada', () => {
+test('lluvia: sin aviso previo, bajar de 50 % no manda nada', () => {
   assert.equal(decidir(estadoInicial(), actual(20), null, T0).mensajes.length, 0);
 });
 
