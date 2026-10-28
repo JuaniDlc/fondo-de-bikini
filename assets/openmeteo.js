@@ -14,6 +14,8 @@ export const ZONA = 'America/Guayaquil';
 
 /** mm en una hora a partir de los cuales una simulación cuenta como «llueve». */
 export const UMBRAL_LLUVIA_MM = 0.1;
+/** Anticipación máxima de los modelos que usan el aeropuerto y los rayos (horas). */
+const ADELANTO_MAX = 6;
 /** Horas de la ventana «próximas horas», contando la hora en curso. */
 export const VENTANA_H = 6;
 // api: nombre para pedirlo; clave: cómo aparece en los nombres de las series de la respuesta.
@@ -209,7 +211,7 @@ function fila(hora, T, HR, P, P3, series, modelos, contexto) {
  * - proyeccion: las horas siguientes a la hora en curso, calculadas con el pronóstico
  *
  * contexto.nino: índices semanales de El Niño; contexto.aeropuerto: lluvia reportada en
- * SEGU hasta T0 ({hora, lluvia_ahora, lluvia_3h}), que solo se usa si es de T0;
+ * SEGU hasta T0 ({hora, lluvia_ahora, lluvia_3h}), que se usa si es de T0 o de T0 − 1;
  * contexto.rayos: rayos de la última hora (data/rayos.json → modelo, con «hasta» en hora local),
  * que solo se usan si terminan entre T0 − 20 min y T0 + 1 h (se entrenó con la hora antes de T0)
  * y son de la misma versión que el modelo (meta.rayos).
@@ -231,16 +233,24 @@ export function procesarRespuesta(
   const horaActual = `${c.time.slice(0, 13)}:00`; // T0: la última hora terminada
   const horaLluvia = sumarHoras(horaActual, 1); // la hora en curso
   const P3 = presionEn(sumarHoras(horaActual, -3));
-  const aeropuertoVigente = aeropuerto && aeropuerto.hora === horaActual ? aeropuerto : null;
+  // El reporte del aeropuerto de T0 llega unos minutos después de la hora (lo trae la lectura del
+  // minuto 7). Mientras tanto se usa el de T0 − 1 con el modelo de una hora más de anticipación,
+  // que es como se entrenó (para la hora T, el aeropuerto hasta T − k).
+  const atrasoAeropuerto = aeropuerto?.hora ? horasEntre(aeropuerto.hora, horaActual) : NaN;
+  const aeropuertoVigente = atrasoAeropuerto === 0 || atrasoAeropuerto === 1 ? aeropuerto : null;
+  const atraso = aeropuertoVigente ? atrasoAeropuerto : 0;
   // Los rayos se usan solo si se calcularon igual que para entrenar este modelo: justo después de
   // publicar un cambio, el navegador puede tener en caché el modelo anterior y los rayos nuevos.
   const desfaseRayos = rayos?.hasta ? horasEntre(horaActual, rayos.hasta) : NaN;
   const rayosVigentes = rayos?.version === META.rayos && desfaseRayos >= -1 / 3 && desfaseRayos <= 1
     ? rayos : null;
   const contextoAhora = { nino, aeropuerto: aeropuertoVigente, rayos: rayosVigentes };
-  // Condiciones de ahora y «próximas 6 h» (desde T0, con el aeropuerto hasta T0)
+  /** Para la hora T0 + k: el modelo con k horas de anticipación, más el atraso del aeropuerto. */
+  const contextoHora = (k) => ({ ...contextoAhora, adelanto: Math.min(k + atraso, ADELANTO_MAX) });
+  // Condiciones de ahora y «próximas 6 h» (desde T0, con el aeropuerto hasta T0 si ya llegó)
   const { ens, mos, ...filaActual } = fila(
-    horaActual, c.temperature_2m, c.relative_humidity_2m, c.pressure_msl, P3, series, modelos, contextoAhora,
+    horaActual, c.temperature_2m, c.relative_humidity_2m, c.pressure_msl, P3, series, modelos,
+    atraso === 0 ? contextoAhora : { nino },
   );
   const [fuente6h, p6] = primeraDisponible([
     ['corregido', mos?.proximas6h],
@@ -248,7 +258,7 @@ export function procesarRespuesta(
   ]) ?? ['ninguna', null];
   // «Esta hora»: la hora en curso, con el aeropuerto hasta T0 como «lluvia previa»
   const iSig = modelos ? modelos.hourly.time.indexOf(horaLluvia) : -1;
-  const mosSig = iSig >= 0 ? probabilidadesMOS(modelos.hourly, iSig, contextoAhora) : null;
+  const mosSig = iSig >= 0 ? probabilidadesMOS(modelos.hourly, iSig, contextoHora(1)) : null;
   const ensSig = probabilidadEnsamble(series, horaLluvia);
   const [fuente, pHora] = primeraDisponible([
     ['corregido', mosSig?.hora],
@@ -289,7 +299,7 @@ export function procesarRespuesta(
     if (hora === horaLluvia) return; // la hora en curso ya está en «actual»
     // Las próximas horas también usan el aeropuerto, con un modelo según cuántas horas faltan.
     const adelanto = horasEntre(horaActual, hora);
-    const contexto = adelanto >= 2 && adelanto <= 6 ? { ...contextoAhora, adelanto } : { nino };
+    const contexto = adelanto >= 2 && adelanto <= ADELANTO_MAX ? contextoHora(adelanto) : { nino };
     const { ens: _e, mos: _m, detalle: _d, ...f } = fila(
       hora, T, HR, P, presionEn(sumarHoras(hora, -3)), series, modelos, contexto,
     );

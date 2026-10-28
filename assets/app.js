@@ -362,13 +362,15 @@ async function actualizarAhora({ automatico = false } = {}) {
   msg.classList.remove('error');
   msg.textContent = 'Actualizando con el clima de este momento…';
   try {
-    // El reporte del aeropuerto y los rayos solo los puede leer el workflow; se reutilizan si son
-    // de esta hora. Los rayos se actualizan cada 10 minutos, así que se vuelven a pedir.
-    const [respuesta, rayos] = await Promise.all([
+    // El reporte del aeropuerto y los rayos solo los puede leer el workflow; se vuelven a pedir
+    // porque cambian (el aeropuerto cada hora, los rayos cada 10 minutos).
+    const [respuesta, rayos, aeropuerto] = await Promise.all([
       consultarOpenMeteo(),
       leerJSON('data/rayos.json').then((r) => r.modelo ?? null, () => estado.rayos),
+      leerJSON('data/actual.json').then((a) => a.aeropuerto ?? estado.aeropuerto, () => estado.aeropuerto),
     ]);
     estado.rayos = rayos;
+    estado.aeropuerto = aeropuerto;
     const datos = procesarRespuesta(respuesta, {
       nino: estado.nino,
       aeropuerto: estado.aeropuerto,
