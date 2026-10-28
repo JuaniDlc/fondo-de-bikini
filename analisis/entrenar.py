@@ -88,7 +88,7 @@ assert abs(heuristica(1011.0, np.nan, 24, 92, 12, 3) - 0.655597) < 1e-6
 
 ANILLOS_KM = (15, 30, 60, 100, 150)  # los mismos de scripts/rayos.py
 RAYOS = [f'rayos_{k}_1h' for k in ANILLOS_KM] + ['rayos_60_20m', 'cercania_20m', 'cercania_1h', 'acercamiento']
-MUESTRAS_HORA = 30  # archivos de la muestra en 60 minutos (uno cada 2 minutos)
+ARCHIVOS_HORA = 180  # archivos de rayos en 60 minutos (uno cada 20 s)
 
 
 def variables_rayos(bloques: pd.DataFrame) -> pd.DataFrame:
@@ -110,7 +110,7 @@ def variables_rayos(bloques: pd.DataFrame) -> pd.DataFrame:
     v['cercania_20m'] = cerca(dmin_20m)
     v['cercania_1h'] = cerca(dmin_1h)
     v['acercamiento'] = cerca(dmin_20m) - cerca(dmin_antes)
-    v[hora['archivos'] < 0.8 * MUESTRAS_HORA] = np.nan  # faltan archivos: no se sabe
+    v[hora['archivos'] < 0.8 * ARCHIVOS_HORA] = np.nan  # faltan archivos: no se sabe
     v.index = v.index + pd.Timedelta(minutes=10)
     return v
 
