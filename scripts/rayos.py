@@ -53,6 +53,28 @@ def distancia_y_rumbo(lat, lon):
     return d, rumbo
 
 
+# Para el modelo corregido: rayos por anillos de distancia (hasta 15 km, de 15 a 30, …) con una
+# muestra fija de archivos, la misma que usa analisis/rayos_historial.py para entrenar.
+ANILLOS_KM = (15, 30, 60, 100, 150)
+
+
+def en_muestra(clave: str) -> bool:
+    """El primer archivo (20 s) de cada minuto par."""
+    m = re.search(r'_s\d{7}\d{2}(\d{2})(\d{2})', clave)
+    return int(m[1]) % 2 == 0 and int(m[2]) < 20
+
+
+def resumen_anillos(lat, lon):
+    """Cuántos rayos hay en cada anillo y la distancia del más cercano (inf si no hay)."""
+    d, _ = distancia_y_rumbo(np.asarray(lat, dtype=float), np.asarray(lon, dtype=float))
+    cuentas, desde = {}, 0
+    for hasta in ANILLOS_KM:
+        cuentas[hasta] = int(((d > desde) & (d <= hasta)).sum()) if desde else int((d <= hasta).sum())
+        desde = hasta
+    cerca = d[d <= ANILLOS_KM[-1]]
+    return cuentas, float(cerca.min()) if cerca.size else math.inf
+
+
 def main():
     ahora = dt.datetime.now(dt.timezone.utc)
     desde = ahora - dt.timedelta(minutes=MINUTOS)
