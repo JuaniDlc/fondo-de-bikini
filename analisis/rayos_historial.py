@@ -12,8 +12,10 @@ Escribe <carpeta>/rayos-2025-03.csv (por defecto analisis/datos/rayos/). Lo corr
 
 import datetime as dt
 import io
+import random
 import re
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -28,15 +30,29 @@ GOES19_DESDE = dt.datetime(2025, 4, 7, tzinfo=dt.timezone.utc)
 BUCKETS = {'goes16': 'https://noaa-goes16.s3.amazonaws.com/', 'goes19': 'https://noaa-goes19.s3.amazonaws.com/'}
 
 sesion = requests.Session()
-sesion.mount('https://', requests.adapters.HTTPAdapter(pool_connections=4, pool_maxsize=64, max_retries=3))
+sesion.mount('https://', requests.adapters.HTTPAdapter(pool_connections=4, pool_maxsize=64))
+
+
+def pedir(url, **kwargs):
+    """GET con reintentos: S3 responde 503 «Slow Down» si se le pide demasiado rápido."""
+    for intento in range(8):
+        try:
+            r = sesion.get(url, timeout=60, **kwargs)
+            if r.status_code not in (500, 503):
+                r.raise_for_status()
+                return r
+        except requests.RequestException:
+            if intento == 7:
+                raise
+        time.sleep(min(60, 2 ** intento) * (0.5 + random.random()))
+    r.raise_for_status()
 
 
 def claves_hora(hora: dt.datetime) -> tuple[str, list[str]]:
     """Archivos de la muestra para una hora UTC; prueba el otro satélite si no hay."""
     orden = ['goes19', 'goes16'] if hora >= GOES19_DESDE else ['goes16', 'goes19']
     for sat in orden:
-        r = sesion.get(BUCKETS[sat], params={'list-type': '2', 'prefix': f'GLM-L2-LCFA/{hora:%Y/%j/%H}/'}, timeout=60)
-        r.raise_for_status()
+        r = pedir(BUCKETS[sat], params={'list-type': '2', 'prefix': f'GLM-L2-LCFA/{hora:%Y/%j/%H}/'})
         claves = [c for c in re.findall(r'<Key>([^<]+)</Key>', r.text) if en_muestra(c)]
         if claves:
             return sat, claves
@@ -47,7 +63,7 @@ def leer(sat_clave):
     sat, clave = sat_clave
     for intento in range(3):
         try:
-            datos = sesion.get(BUCKETS[sat] + clave, timeout=60).content
+            datos = pedir(BUCKETS[sat] + clave).content
             with h5py.File(io.BytesIO(datos), 'r') as f:
                 lat, lon = f['flash_lat'][:], f['flash_lon'][:]
                 calidad = f['flash_quality_flag'][:]
@@ -74,13 +90,13 @@ def main():
         horas.append(h)
         h += dt.timedelta(hours=1)
 
-    with ThreadPoolExecutor(16) as ex:
+    with ThreadPoolExecutor(4) as ex:
         listas = list(ex.map(claves_hora, horas))
     trabajos = [(sat, c) for sat, claves in listas for c in claves]
     print(f'{sys.argv[1]}: {len(trabajos)} archivos', flush=True)
 
     bloques = {}
-    with ThreadPoolExecutor(48) as ex:
+    with ThreadPoolExecutor(24) as ex:
         for n, (clave, lat, lon) in enumerate(ex.map(leer, trabajos), 1):
             if lat is None:
                 continue
