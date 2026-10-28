@@ -147,9 +147,8 @@ function dibujar() {
 }
 
 /**
- * Tabla de las próximas 6 horas: la probabilidad de cada hora y la de que llueva al menos
- * una vez desde ahora hasta el final de esa hora. Las horas vienen como en Open-Meteo (la de
- * las 22:00 es de 21:00 a 22:00).
+ * Tabla de las próximas 6 horas con la probabilidad de cada hora. Las horas vienen como en
+ * Open-Meteo (la de las 22:00 es de 21:00 a 22:00).
  */
 function dibujarHoras() {
   const { actual } = estado;
@@ -158,13 +157,13 @@ function dibujarHoras() {
   if (!acum?.length) return;
   const enEsaHora = new Map(estado.proyeccion.map((f) => [f.hora, f.probabilidad]));
   enEsaHora.set(actual.horaLluvia, actual.probabilidad);
-  $('horas-filas').innerHTML = acum.map(({ hora, probabilidad }) => {
+  $('horas-filas').innerHTML = acum.map(({ hora }) => {
     const p = enEsaHora.get(hora);
     const barra = (v, clase) => (v === undefined ? '—'
       : `<span class="celda"><span class="barra ${clase}"><span style="width:${Math.round(v)}%"></span></span><b>${Math.round(v)} %</b></span>`);
     const h = (local) => Number(local.slice(11, 13));
     return `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
-      + `<td>${barra(p, 'hora')}</td><td>${barra(probabilidad, 'acum')}</td></tr>`;
+      + `<td>${barra(p, 'hora')}</td></tr>`;
   }).join('');
 }
 
