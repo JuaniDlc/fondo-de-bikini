@@ -1,13 +1,12 @@
 """Historial de rayos cerca de Guayaquil, cada 10 minutos, para entrenar el modelo corregido.
 
-Lee los archivos del sensor GLM de GOES-Este (GOES-16 hasta el 7 de abril de 2025, GOES-19
-después) desde el archivo público de NOAA en AWS. Para no bajar todo, usa la misma muestra que
-scripts/rayos.py en vivo: el primer archivo (20 s) de cada minuto par. Cuenta los rayos por
-anillos de distancia y guarda el más cercano.
+Lee todos los archivos del sensor GLM de GOES-Este (uno cada 20 s; GOES-16 hasta el 7 de abril
+de 2025, GOES-19 después) desde el archivo público de NOAA en AWS, igual que scripts/rayos.py en
+vivo. Cuenta los rayos por anillos de distancia y guarda el más cercano.
 
 Uso: python analisis/rayos_historial.py 2025-03 [carpeta]
 Escribe <carpeta>/rayos-2025-03.csv (por defecto analisis/datos/rayos/). Lo corre el workflow
-«Historial de rayos», uno por mes, porque son varios GB por mes.
+«Historial de rayos», uno por mes, porque son unos 45 GB por mes.
 """
 
 import datetime as dt
@@ -24,7 +23,7 @@ import numpy as np
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
-from rayos import ANILLOS_KM, en_muestra, resumen_anillos  # noqa: E402
+from rayos import ANILLOS_KM, resumen_anillos  # noqa: E402
 
 GOES19_DESDE = dt.datetime(2025, 4, 7, tzinfo=dt.timezone.utc)
 BUCKETS = {'goes16': 'https://noaa-goes16.s3.amazonaws.com/', 'goes19': 'https://noaa-goes19.s3.amazonaws.com/'}
@@ -49,11 +48,11 @@ def pedir(url, **kwargs):
 
 
 def claves_hora(hora: dt.datetime) -> tuple[str, list[str]]:
-    """Archivos de la muestra para una hora UTC; prueba el otro satélite si no hay."""
+    """Archivos de una hora UTC; prueba el otro satélite si no hay."""
     orden = ['goes19', 'goes16'] if hora >= GOES19_DESDE else ['goes16', 'goes19']
     for sat in orden:
         r = pedir(BUCKETS[sat], params={'list-type': '2', 'prefix': f'GLM-L2-LCFA/{hora:%Y/%j/%H}/'})
-        claves = [c for c in re.findall(r'<Key>([^<]+)</Key>', r.text) if en_muestra(c)]
+        claves = re.findall(r'<Key>([^<]+)</Key>', r.text)
         if claves:
             return sat, claves
     return '', []
@@ -96,7 +95,7 @@ def main():
     print(f'{sys.argv[1]}: {len(trabajos)} archivos', flush=True)
 
     bloques = {}
-    with ThreadPoolExecutor(24) as ex:
+    with ThreadPoolExecutor(32) as ex:
         for n, (clave, lat, lon) in enumerate(ex.map(leer, trabajos), 1):
             if lat is None:
                 continue
@@ -108,7 +107,7 @@ def main():
             for k, v in cuentas.items():
                 fila[f'r{k}'] += v
             fila['dmin'] = min(fila['dmin'], dmin)
-            if n % 2000 == 0:
+            if n % 10000 == 0:
                 print(f'  {n}/{len(trabajos)}', flush=True)
 
     columnas = ['bloque', 'archivos', *[f'r{k}' for k in ANILLOS_KM], 'dmin']
