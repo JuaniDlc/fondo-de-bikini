@@ -4,7 +4,8 @@ export default {
     "entrenado": "2026-10-27",
     "datos": "2023-01-01 a 2026-10-26",
     "umbral_mm": 0.1,
-    "ventana_h": 6
+    "ventana_h": 6,
+    "rayos": "todos-20s"
   },
   "hora": {
     "variables": [

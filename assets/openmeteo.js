@@ -7,7 +7,7 @@
 // Los tres valores se guardan para poder compararlos.
 
 import { calcular } from './modelo.js';
-import { MODELOS_MOS, VARIABLES_MOS, probabilidadesMOS } from './mos.js';
+import { META, MODELOS_MOS, VARIABLES_MOS, probabilidadesMOS } from './mos.js';
 
 export const GUAYAQUIL = { lat: -2.19, lon: -79.89 };
 export const ZONA = 'America/Guayaquil';
@@ -211,7 +211,8 @@ function fila(hora, T, HR, P, P3, series, modelos, contexto) {
  * contexto.nino: índices semanales de El Niño; contexto.aeropuerto: lluvia reportada en
  * SEGU hasta T0 ({hora, lluvia_ahora, lluvia_3h}), que solo se usa si es de T0;
  * contexto.rayos: rayos de la última hora (data/rayos.json → modelo, con «hasta» en hora local),
- * que solo se usan si terminan entre T0 − 20 min y T0 + 1 h (se entrenó con la hora antes de T0).
+ * que solo se usan si terminan entre T0 − 20 min y T0 + 1 h (se entrenó con la hora antes de T0)
+ * y son de la misma versión que el modelo (meta.rayos).
  */
 export function procesarRespuesta(
   { clima, modelos = null, ensamble = null },
@@ -231,8 +232,11 @@ export function procesarRespuesta(
   const horaLluvia = sumarHoras(horaActual, 1); // la hora en curso
   const P3 = presionEn(sumarHoras(horaActual, -3));
   const aeropuertoVigente = aeropuerto && aeropuerto.hora === horaActual ? aeropuerto : null;
+  // Los rayos se usan solo si se calcularon igual que para entrenar este modelo: justo después de
+  // publicar un cambio, el navegador puede tener en caché el modelo anterior y los rayos nuevos.
   const desfaseRayos = rayos?.hasta ? horasEntre(horaActual, rayos.hasta) : NaN;
-  const rayosVigentes = desfaseRayos >= -1 / 3 && desfaseRayos <= 1 ? rayos : null;
+  const rayosVigentes = rayos?.version === META.rayos && desfaseRayos >= -1 / 3 && desfaseRayos <= 1
+    ? rayos : null;
   const contextoAhora = { nino, aeropuerto: aeropuertoVigente, rayos: rayosVigentes };
   // Condiciones de ahora y «próximas 6 h» (desde T0, con el aeropuerto hasta T0)
   const { ens, mos, ...filaActual } = fila(

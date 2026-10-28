@@ -58,6 +58,9 @@ def distancia_y_rumbo(lat, lon):
 # Para el modelo corregido: rayos por anillos de distancia (hasta 15 km, de 15 a 30, …) con todos
 # los archivos, igual que analisis/rayos_historial.py para entrenar.
 ANILLOS_KM = (15, 30, 60, 100, 150)
+# Cambia si cambia la forma de calcular las variables: la página solo usa rayos.json si coincide con
+# la versión con que se entrenó su modelo (meta.rayos en assets/mos-coeficientes.js).
+VERSION_RAYOS = 'todos-20s'
 
 
 def resumen_anillos(lat, lon):
@@ -170,7 +173,7 @@ def main():
                                       sum(math.cos(math.radians(x)) for x in rumbos))) % 360
         resultado['rumbo'] = RUMBOS[round(ang / 45) % 8]
     resultado['modelo'] = None if variables is None else {
-        'hasta': (hasta - dt.timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M'), **variables}
+        'hasta': (hasta - dt.timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M'), 'version': VERSION_RAYOS, **variables}
     avisar_si_hay_que_guardar(resultado['modelo'])
     SALIDA.parent.mkdir(exist_ok=True)
     SALIDA.write_text(json.dumps(resultado, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')

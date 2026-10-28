@@ -143,6 +143,14 @@ def rayos_por_hora():
     return v
 
 
+def version_rayos():
+    """Versión de las variables de rayos de scripts/rayos.py (va en meta.rayos de los coeficientes)."""
+    import sys
+    sys.path.insert(0, str(AQUI.parent / 'scripts'))
+    from rayos import VERSION_RAYOS
+    return VERSION_RAYOS
+
+
 def comprobar_rayos(b, v):
     """scripts/rayos.py (en vivo) debe calcular lo mismo que variables_rayos (entrenamiento)."""
     import sys
@@ -461,7 +469,8 @@ def exportar_produccion(df, p):
 
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
-            'umbral_mm': UMBRAL_MM, 'ventana_h': VENTANA}
+            'umbral_mm': UMBRAL_MM, 'ventana_h': VENTANA,
+            **({'rayos': version_rayos()} if con_rayos else {})}
     (raiz / 'assets' / 'mos-coeficientes.js').write_text(
         '// Generado por analisis/entrenar.py. No editar a mano: vuelve a correr el script.\n'
         f'export default {json.dumps({"meta": meta, **modelos}, indent=2, ensure_ascii=False)};\n',
