@@ -158,6 +158,22 @@ def cargar() -> pd.DataFrame:
     return df, p
 
 
+
+def columnas_ventana(df, p, k):
+    """Las variables «de las próximas horas» y el objetivo con una ventana de k horas en vez de 6,
+    para «¿llueve antes de T + k?». Con k = VENTANA son las mismas columnas de cargar()."""
+    out = {}
+    for corto, col in MODELOS.items():
+        pr = p[f'precipitation_{col}']
+        llueve = (pr >= UMBRAL_MM).where(pr.notna())
+        out[f'{corto}_mm_6h'] = np.log1p(pr.rolling(k).sum().shift(-k))
+        out[f'{corto}_max_6h'] = np.log1p(pr.rolling(k).max().shift(-k))
+        out[f'{corto}_llueve_6h'] = llueve.rolling(k).max().shift(-k)
+    out['cape_max_6h'] = np.log1p(p['cape_gfs_seamless'].rolling(k).max().shift(-k))
+    out['nubes_6h'] = p['cloud_cover_gfs_seamless'].rolling(k).mean().shift(-k)
+    out['y_6h'] = df['y_hora'].rolling(k, min_periods=k).max().shift(-k)
+    return out
+
 COMUNES = ['hora_sin', 'hora_cos', 'dia_sin', 'dia_cos', 'nino12', 'nino34']
 VARIABLES = {
     'hora': COMUNES + [f'{c}_{s}' for c in MODELOS for s in ('mm', 'mm_vecinas')]
@@ -296,10 +312,38 @@ def main():
             informe.append(f"| {nombre} | {sel.sum():,} | {pct(yt[sel].mean())} | "
                            f"{c['mejora'] * 100:+.0f} %; {c['auc']:.2f} | {m['mejora'] * 100:+.0f} %; {m['auc']:.2f} |")
         informe.append('')
+    informe += acumulada(df, pron)
     (AQUI / 'resultados.md').write_text('\n'.join(informe), encoding='utf-8')
     print('\n'.join(informe))
     exportar_produccion(df, pron)
 
+
+ACUMULADAS = range(1, VENTANA + 1)
+
+
+def acumulada(df, pron):
+    """Evalúa «¿llueve antes de T + k?» (de T + 1 a T + k) para k = 1 … 6, con y sin el aeropuerto."""
+    lineas = ['## ¿Llueve antes de cierta hora? (acumulada)', '',
+              'Probabilidad de que llueva al menos una vez desde ahora hasta k horas después. '
+              'Es la que muestra la página en la tabla hora por hora.', '',
+              '| Hasta | Llovió | Climatología (Brier) | MOS (Brier; mejora; AUC) | MOS + aeropuerto (Brier; mejora; AUC) |',
+              '|---|---|---|---|---|']
+    for k in ACUMULADAS:
+        d = df.assign(**columnas_ventana(df, pron, k))
+        cols = VARIABLES['6h']
+        datos = d.dropna(subset=cols + PERSISTENCIA + ['y_6h'])
+        tr, te = datos[datos.index < CORTE], datos[datos.index >= CORTE]
+        yt = te['y_6h'].to_numpy()
+        clim = climatologia(tr, te, 'y_6h')
+        bc = brier_score_loss(yt, clim)
+        celdas = []
+        for extra in ([], PERSISTENCIA):
+            pipe = make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000))
+            pipe.fit(tr[cols + extra], tr['y_6h'])
+            m = metricas(yt, pipe.predict_proba(te[cols + extra])[:, 1], bc)
+            celdas.append(f"{m['brier']:.3f}; {m['mejora'] * 100:+.0f} %; {m['auc']:.2f}")
+        lineas.append(f'| {k} h | {pct(yt.mean())} | {bc:.3f} | {celdas[0]} | {celdas[1]} |')
+    return lineas + ['']
 
 # ---------- modelo para la página ----------
 
@@ -344,6 +388,12 @@ def exportar_produccion(df, p):
         d['lluvia_previa_3h'] = d['y_hora'].shift(k).rolling(3, min_periods=3).max()
         ajustar(nombre_previa(k), d, VARIABLES['hora'] + PREVIA, 'y_hora')
 
+    # «¿Llueve antes de T + k?», con y sin el aeropuerto (k = 6 es el modelo de 6 h).
+    for k in ACUMULADAS[:-1]:
+        d = df.assign(**columnas_ventana(df, p, k))
+        ajustar(f'acum_{k}', d, VARIABLES['6h'], 'y_6h')
+        ajustar(f'acum_{k}_con_metar', d, VARIABLES['6h'] + PERSISTENCIA, 'y_6h')
+
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
             'umbral_mm': UMBRAL_MM, 'ventana_h': VENTANA}
@@ -355,8 +405,8 @@ def exportar_produccion(df, p):
     # Casos de prueba: horas variadas donde los cuatro modelos se pueden calcular.
     datos6, _, _ = filas['6h_con_metar']
     comunes = datos6.index.intersection(filas['hora'][0].index)
-    for k in ADELANTOS:
-        comunes = comunes.intersection(filas[nombre_previa(k)][0].index)
+    for nombre, (datos, _, _) in filas.items():
+        comunes = comunes.intersection(datos.index)
     elegidas = list(pd.Series(comunes).sample(5, random_state=7))
     elegidas.append(datos6.loc[comunes, 'lluvia_ahora'].idxmax())  # una con lluvia en el aeropuerto
     casos = []

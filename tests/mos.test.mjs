@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { aplicarMOS, ninoVigente, variablesMOS } from '../assets/mos.js';
+import { aplicarMOS, ninoVigente, probabilidadesAcumuladas, variablesMOS } from '../assets/mos.js';
 import { huboLluvia, leerNino, resumirAeropuerto } from '../scripts/fuentes.mjs';
 
 // Casos con datos crudos y el resultado de Python (los escribe analisis/entrenar.py).
@@ -16,10 +16,22 @@ test('el modelo corregido da en JavaScript lo mismo que en Python', () => {
     const v = variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto });
     for (const [nombre, esperado] of Object.entries(c.esperado)) {
       const k = nombre === 'hora_con_metar' ? '1' : nombre.match(/^hora_con_metar_(\d)$/)?.[1];
-      const vk = k ? variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto_previo[k] }) : v;
+      const ventana = Number(nombre.match(/^acum_(\d)/)?.[1]);
+      const vk = k ? variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto_previo[k] })
+        : ventana ? variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto, ventana }) : v;
       const p = aplicarMOS(nombre, vk);
       assert.ok(Math.abs(p - esperado) < 1e-5, `${c.hora} ${nombre}: ${p} ≠ ${esperado}`);
     }
+  }
+});
+
+test('la acumulada nunca baja y termina en el modelo de 6 h', () => {
+  for (const c of casos) {
+    const i = c.hourly.time.indexOf(c.hora);
+    const acum = probabilidadesAcumuladas(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto });
+    assert.equal(acum.length, 6);
+    for (let k = 1; k < 6; k++) assert.ok(acum[k] >= acum[k - 1]);
+    assert.ok(acum[5] >= c.esperado['6h_con_metar'] - 1e-5); // coeficientes redondeados
   }
 });
 

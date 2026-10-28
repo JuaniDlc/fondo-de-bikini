@@ -164,6 +164,19 @@ button:focus-visible { outline: 3px solid var(--tendencia); outline-offset: 2px;
 .debug td { padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--rejilla); }
 .debug td:last-child { text-align: right; }
 
+.horas table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.horas th, .horas td { padding: 0.4rem 0.3rem; border-bottom: 1px solid var(--rejilla); text-align: left; font-weight: 500; }
+.horas thead th { font-size: 0.75rem; font-weight: 500; color: var(--texto-2); vertical-align: bottom; }
+.horas tbody th { white-space: nowrap; color: var(--texto-2); }
+.horas td { width: 40%; }
+.celda { display: flex; align-items: center; gap: 0.4rem; }
+.celda b { min-width: 3em; text-align: right; font-weight: 600; }
+.barra { flex: 1; height: 8px; border-radius: 4px; background: var(--rejilla); overflow: hidden; }
+.barra > span { display: block; height: 100%; border-radius: 4px; }
+.barra.hora > span { background: var(--serie); }
+.barra.acum > span { background: var(--tendencia); }
+.nota { margin: 0.6rem 0 0; font-size: 0.8rem; color: var(--texto-2); }
+
 footer { font-size: 0.8rem; color: var(--tenue); text-align: center; }
 footer a { color: inherit; }
 

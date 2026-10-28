@@ -102,14 +102,14 @@ function dibujar() {
   const real = serieReal();
   const tend = calcularTendencia(real);
 
-  // El número grande es la probabilidad de las próximas 6 horas, que es lo que el modelo
-  // acierta mejor; si no se puede calcular, la de esta hora.
-  const principal = p6 ?? pHora;
-  $('etiqueta').textContent = p6 !== null ? 'Lluvia en las próximas 6 horas' : 'Probabilidad de lluvia ahora';
-  $('prob').textContent = `${principal} %`;
-  $('frase').textContent = frase(principal);
+  // El número grande es la hora en curso; debajo, las próximas 6 horas en conjunto.
+  const inicio = actual.horaLluvia ? actual.hora : sumarHoras(actual.hora, -1);
+  const fin = actual.horaLluvia ?? actual.hora;
+  $('etiqueta').textContent = `Lluvia de ${horaCorta(inicio)} a ${horaCorta(fin)}`;
+  $('prob').textContent = `${pHora} %`;
+  $('frase').textContent = frase(pHora);
   $('proximas').hidden = p6 === null;
-  if (p6 !== null) $('proximas').textContent = `En esta hora: ${pHora} %`;
+  if (p6 !== null) $('proximas').textContent = `En las próximas 6 horas: ${p6} %`;
   const aero = actual.aeropuerto;
   $('aeropuerto').hidden = !aero || aero.lluvia_ahora === null;
   if (aero && aero.lluvia_ahora !== null) {
@@ -120,7 +120,10 @@ function dibujar() {
   $('hum').innerHTML = `${num(actual.humedad)}<small> %</small>`;
   $('pres').innerHTML = `${num(actual.presion, 1)}<small> hPa</small>`;
 
-  // Aviso de precaución
+  dibujarHoras();
+
+  // Aviso de precaución, sobre las próximas 6 horas
+  const principal = p6 ?? pHora;
   const alta = principal >= UMBRAL_AVISO_6H;
   const media = principal >= UMBRAL_AVISO;
   const aviso = $('aviso');
@@ -141,6 +144,28 @@ function dibujar() {
 
   dibujarGrafica(real, serieProyeccion(), tend);
   if (debug) dibujarDebug();
+}
+
+/**
+ * Tabla de las próximas 6 horas: la probabilidad de cada hora y la de que llueva al menos
+ * una vez desde ahora hasta el final de esa hora. Las horas vienen como en Open-Meteo (la de
+ * las 22:00 es de 21:00 a 22:00).
+ */
+function dibujarHoras() {
+  const { actual } = estado;
+  const acum = actual.acumulada;
+  $('horas').hidden = !acum?.length;
+  if (!acum?.length) return;
+  const enEsaHora = new Map(estado.proyeccion.map((f) => [f.hora, f.probabilidad]));
+  enEsaHora.set(actual.horaLluvia, actual.probabilidad);
+  $('horas-filas').innerHTML = acum.map(({ hora, probabilidad }) => {
+    const p = enEsaHora.get(hora);
+    const barra = (v, clase) => (v === undefined ? '—'
+      : `<span class="celda"><span class="barra ${clase}"><span style="width:${Math.round(v)}%"></span></span><b>${Math.round(v)} %</b></span>`);
+    const h = (local) => Number(local.slice(11, 13));
+    return `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
+      + `<td>${barra(p, 'hora')}</td><td>${barra(probabilidad, 'acum')}</td></tr>`;
+  }).join('');
 }
 
 // ---------- gráfica (SVG a mano) ----------

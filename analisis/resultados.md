@@ -112,3 +112,16 @@ Horas de prueba: 14,885. Llovió en el 15 % de ellas (en entrenamiento: 15 %).
 | Temporada lluviosa (ene–abr) | 5,331 | 32 % | -65 %; 0.74 | +27 %; 0.85 |
 | Temporada seca (may–dic) | 9,554 | 6 % | -142 %; 0.86 | +37 %; 0.90 |
 | Último mes (2026-10) | 576 | 26 % | -50 %; 0.76 | +49 %; 0.85 |
+
+## ¿Llueve antes de cierta hora? (acumulada)
+
+Probabilidad de que llueva al menos una vez desde ahora hasta k horas después. Es la que muestra la página en la tabla hora por hora.
+
+| Hasta | Llovió | Climatología (Brier) | MOS (Brier; mejora; AUC) | MOS + aeropuerto (Brier; mejora; AUC) |
+|---|---|---|---|---|
+| 1 h | 7 % | 0.056 | 0.049; +13 %; 0.90 | 0.032; +43 %; 0.94 |
+| 2 h | 9 % | 0.071 | 0.059; +16 %; 0.90 | 0.045; +36 %; 0.93 |
+| 3 h | 11 % | 0.082 | 0.067; +18 %; 0.90 | 0.055; +33 %; 0.92 |
+| 4 h | 12 % | 0.093 | 0.074; +20 %; 0.90 | 0.063; +32 %; 0.92 |
+| 5 h | 14 % | 0.102 | 0.080; +22 %; 0.90 | 0.070; +31 %; 0.91 |
+| 6 h | 15 % | 0.110 | 0.086; +22 %; 0.90 | 0.077; +30 %; 0.91 |

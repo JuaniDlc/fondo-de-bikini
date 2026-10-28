@@ -44,9 +44,10 @@ export function ninoVigente(nino, local) {
 
 /**
  * Variables de entrada para la hora con índice i de la respuesta horaria multimodelo.
- * Una variable vale null si faltan datos para calcularla.
+ * Una variable vale null si faltan datos para calcularla. Las variables «de las próximas horas»
+ * (_6h) miran ventana horas hacia adelante: 6, salvo en los modelos «¿llueve antes de i + k?».
  */
-export function variablesMOS(hourly, i, { nino, aeropuerto } = {}) {
+export function variablesMOS(hourly, i, { nino, aeropuerto, ventana = VENTANA } = {}) {
   const local = hourly.time[i];
   const hora = Number(local.slice(11, 13));
   const dia = diaDelAno(local);
@@ -69,7 +70,7 @@ export function variablesMOS(hourly, i, { nino, aeropuerto } = {}) {
     const col = `precipitation_${modelo}`;
     const ahora = tramo(hourly, col, i, i);
     const vecinas = tramo(hourly, col, i - 1, i + 1);
-    const prox = tramo(hourly, col, i + 1, i + VENTANA);
+    const prox = tramo(hourly, col, i + 1, i + ventana);
     v[`${corto}_mm`] = quizas(ahora, (xs) => Math.log1p(xs[0]));
     v[`${corto}_mm_vecinas`] = log1p(quizas(vecinas, max));
     v[`${corto}_mm_6h`] = log1p(quizas(prox, suma));
@@ -77,10 +78,10 @@ export function variablesMOS(hourly, i, { nino, aeropuerto } = {}) {
     v[`${corto}_llueve_6h`] = quizas(prox, (xs) => (xs.some((x) => x >= UMBRAL_MM) ? 1 : 0));
   }
   const cape = tramo(hourly, 'cape_gfs_seamless', i, i);
-  const capeProx = tramo(hourly, 'cape_gfs_seamless', i + 1, i + VENTANA);
+  const capeProx = tramo(hourly, 'cape_gfs_seamless', i + 1, i + ventana);
   const hum = tramo(hourly, 'relative_humidity_2m_gfs_seamless', i, i);
   const nubes = tramo(hourly, 'cloud_cover_gfs_seamless', i, i);
-  const nubesProx = tramo(hourly, 'cloud_cover_gfs_seamless', i + 1, i + VENTANA);
+  const nubesProx = tramo(hourly, 'cloud_cover_gfs_seamless', i + 1, i + ventana);
   v.cape = quizas(cape, (xs) => Math.log1p(xs[0]));
   v.cape_max_6h = log1p(quizas(capeProx, max));
   v.humedad = hum ? hum[0] : null;
@@ -121,4 +122,24 @@ export function probabilidadesMOS(hourly, i, contexto = {}) {
     proximas6h: seisMetar ?? aplicarMOS('6h', v),
     usaAeropuerto: seisMetar !== null,
   };
+}
+
+/** Nombre del modelo «¿llueve antes de i + k?» (k = 6 es el de las próximas 6 horas). */
+export const modeloAcumulado = (k, conAeropuerto) =>
+  (k === VENTANA ? (conAeropuerto ? '6h_con_metar' : '6h') : `acum_${k}${conAeropuerto ? '_con_metar' : ''}`);
+
+/**
+ * Probabilidad de que llueva al menos una vez de i + 1 a i + k, para k = 1 … 6
+ * (aeropuerto resumido hasta i, si lo hay). Cada valor es al menos el anterior.
+ * @returns {number[] | null} null si falta algún dato
+ */
+export function probabilidadesAcumuladas(hourly, i, contexto = {}) {
+  const out = [];
+  for (let k = 1; k <= VENTANA; k++) {
+    const v = variablesMOS(hourly, i, { ...contexto, ventana: k });
+    const p = aplicarMOS(modeloAcumulado(k, true), v) ?? aplicarMOS(modeloAcumulado(k, false), v);
+    if (p === null) return null;
+    out.push(Math.max(p, out.at(-1) ?? 0));
+  }
+  return out;
 }

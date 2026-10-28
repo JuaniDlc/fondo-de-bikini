@@ -25,6 +25,17 @@
 
     <div class="aviso" id="aviso" role="alert" hidden></div>
 
+    <section class="horas" id="horas" hidden>
+      <h2>Próximas horas</h2>
+      <table>
+        <thead>
+          <tr><th scope="col">Hora</th><th scope="col">Llueve en esa hora</th><th scope="col">Llueve desde ahora hasta esa hora</th></tr>
+        </thead>
+        <tbody id="horas-filas"></tbody>
+      </table>
+      <p class="nota">Calibrado con la lluvia que de verdad reportó el aeropuerto de Guayaquil: cuando dice 70 %, llovió cerca de 7 de cada 10 veces.</p>
+    </section>
+
     <section class="datos" aria-label="Condiciones actuales">
       <div class="dato"><span class="valor" id="temp">—</span><span class="nombre">Temperatura</span></div>
       <div class="dato"><span class="valor" id="hum">—</span><span class="nombre">Humedad</span></div>

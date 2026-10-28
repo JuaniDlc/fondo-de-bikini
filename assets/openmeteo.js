@@ -7,7 +7,7 @@
 // Los tres valores se guardan para poder compararlos.
 
 import { calcular } from './modelo.js';
-import { MODELOS_MOS, VARIABLES_MOS, probabilidadesMOS } from './mos.js';
+import { MODELOS_MOS, VARIABLES_MOS, probabilidadesAcumuladas, probabilidadesMOS } from './mos.js';
 
 export const GUAYAQUIL = { lat: -2.19, lon: -79.89 };
 export const ZONA = 'America/Guayaquil';
@@ -206,6 +206,8 @@ function fila(hora, T, HR, P, P3, series, modelos, contexto) {
  *   que en Open-Meteo se llama T0 + 1) y proximas6h la de las 6 horas desde T0
  * - pasado: las horas ya terminadas (hasta T0), calculadas con los datos horarios
  * - proyeccion: las horas siguientes a la hora en curso, calculadas con el pronóstico
+ * - actual.acumulada: para cada una de las 6 horas desde T0, la probabilidad de que llueva
+ *   al menos una vez hasta el final de esa hora ({hora, probabilidad}, hora como en Open-Meteo)
  *
  * contexto.nino: índices semanales de El Niño; contexto.aeropuerto: lluvia reportada en
  * SEGU hasta T0 ({hora, lluvia_ahora, lluvia_3h}), que solo se usa si es de T0.
@@ -283,6 +285,25 @@ export function procesarRespuesta({ clima, modelos = null, ensamble = null }, { 
     if (actual.fuente === 'corregido' && f.fuente !== 'corregido') return;
     (hora < horaLluvia ? pasado : proyeccion).push(f);
   });
+
+  // «¿Llueve antes de…?»: nunca menos que la probabilidad de cada hora de la ventana.
+  const iAhora = modelos ? modelos.hourly.time.indexOf(horaActual) : -1;
+  const acum = actual.fuente === 'corregido' && iAhora >= 0
+    ? probabilidadesAcumuladas(modelos.hourly, iAhora, contextoAhora) : null;
+  if (acum) {
+    const porHora = proyeccion;
+    let previo = 0;
+    actual.acumulada = acum.map((p, k) => {
+      const hora = sumarHoras(horaActual, k + 1);
+      // La primera es la misma pregunta que «esta hora»: se usa ese valor para que coincidan.
+      if (hora === horaLluvia) previo = actual.probabilidad;
+      else previo = Math.max(pct(p), porHora.find((f) => f.hora === hora)?.probabilidad ?? 0, previo);
+      return { hora, probabilidad: previo };
+    });
+    actual.proximas6h = actual.acumulada.at(-1).probabilidad;
+  } else {
+    actual.acumulada = null;
+  }
 
   return { actual, pasado, proyeccion };
 }

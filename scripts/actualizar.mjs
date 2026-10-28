@@ -18,7 +18,7 @@ async function leerJSON(nombre, porDefecto) {
   }
 }
 
-const sinDetalle = ({ detalle, momento, presion3h, modelos, ...resto }) => resto;
+const sinDetalle = ({ detalle, momento, presion3h, modelos, acumulada, ...resto }) => resto;
 
 async function intentar(nombre, f, porDefecto) {
   try {
