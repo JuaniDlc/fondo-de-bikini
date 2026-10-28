@@ -7,11 +7,10 @@ import {
 
 const ESPERA_BOTON_S = 60;
 const VIGENCIA_MIN = 10; // con la página abierta, datos más viejos que esto se recalculan solos
-// Umbrales sobre la probabilidad de lluvia en las próximas 6 horas. En la evaluación de
-// analisis/resultados.md, cuando el modelo con el reporte del aeropuerto dijo ≥ 80 %,
-// llovió el 87 % de las veces.
-const UMBRAL_AVISO = 60;
-const UMBRAL_AVISO_6H = 80;
+// Umbrales del aviso sobre la hora más probable de la tabla: avisa solo si alguna hora es
+// más probable que no.
+const UMBRAL_ATENCION = 50;
+const UMBRAL_PRECAUCION = 70;
 const CLAVE_ESPERA = 'lluvia-gye-espera-hasta';
 
 const $ = (id) => document.getElementById(id);
@@ -99,11 +98,10 @@ function dibujar() {
   const { actual } = estado;
   if (!actual) return;
   const pHora = Math.round(actual.probabilidad);
-  const p6 = actual.proximas6h === null || actual.proximas6h === undefined ? null : Math.round(actual.proximas6h);
   const real = serieReal();
   const tend = calcularTendencia(real);
 
-  // El número grande es la hora en curso; debajo, las próximas 6 horas en conjunto.
+  // El número grande es la hora en curso.
   const inicio = actual.horaLluvia ? actual.hora : sumarHoras(actual.hora, -1);
   const fin = actual.horaLluvia ?? actual.hora;
   $('etiqueta').textContent = `Lluvia de ${horaCorta(inicio)} a ${horaCorta(fin)}`;
@@ -122,16 +120,16 @@ function dibujar() {
 
   dibujarHoras();
 
-  // Aviso de precaución, sobre las próximas 6 horas
-  const principal = p6 ?? pHora;
-  const alta = principal >= UMBRAL_AVISO_6H;
-  const media = principal >= UMBRAL_AVISO;
+  // Aviso sobre la hora más probable de la tabla
+  const mayor = proximasHoras().reduce((a, b) => (b.probabilidad > a.probabilidad ? b : a), { probabilidad: pHora });
+  const pMayor = Math.round(mayor.probabilidad);
+  const cuando = mayor.hora ? ` entre las ${rangoHora(mayor.hora)} (${pMayor} %)` : ` (${pMayor} %)`;
   const aviso = $('aviso');
-  aviso.hidden = !media;
-  if (alta) {
-    aviso.innerHTML = '<strong>Precaución:</strong> lluvia muy probable en las próximas horas. Lleva paraguas y evita las calles que suelen inundarse.';
-  } else if (media) {
-    aviso.innerHTML = '<strong>Atención:</strong> es posible que llueva en las próximas horas. Ten el paraguas a mano.';
+  aviso.hidden = pMayor < UMBRAL_ATENCION;
+  if (pMayor >= UMBRAL_PRECAUCION) {
+    aviso.innerHTML = `<strong>Precaución:</strong> lluvia probable${cuando}. Lleva paraguas y evita las calles que suelen inundarse.`;
+  } else if (pMayor >= UMBRAL_ATENCION) {
+    aviso.innerHTML = `<strong>Atención:</strong> posible lluvia${cuando}. Ten el paraguas a mano.`;
   }
 
   // Cuándo se calcularon los datos en pantalla y de qué hora es el dato del clima
@@ -150,11 +148,22 @@ function dibujar() {
  * Tabla de las próximas 6 horas con la probabilidad de cada hora. Las horas vienen como en
  * Open-Meteo (la de las 22:00 es de 21:00 a 22:00).
  */
-function dibujarHoras() {
+/** La hora en curso y las siguientes, hasta FUTURO_H filas ({hora, probabilidad}). */
+function proximasHoras() {
   const { actual } = estado;
-  const filas = actual.horaLluvia
+  return actual.horaLluvia
     ? [{ hora: actual.horaLluvia, probabilidad: actual.probabilidad }, ...estado.proyeccion].slice(0, FUTURO_H)
     : [];
+}
+
+/** «22 y las 23 h» para la fila de Open-Meteo de las 23:00 (lluvia de 22:00 a 23:00). */
+function rangoHora(hora) {
+  const h = (local) => Number(local.slice(11, 13));
+  return `${h(sumarHoras(hora, -1))} y las ${h(hora)} h`;
+}
+
+function dibujarHoras() {
+  const filas = proximasHoras();
   $('horas').hidden = !filas.length;
   if (!filas.length) return;
   $('horas-filas').innerHTML = filas.map(({ hora, probabilidad: p }) => {
