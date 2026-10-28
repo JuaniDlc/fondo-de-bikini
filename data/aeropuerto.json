@@ -1,8 +1,11 @@
 {
- "generado": "2026-10-28T12:07:11.532Z",
+ "generado": "2026-10-28T12:40:19.954Z",
  "hora": "2026-10-28T07:00",
  "lluvia_ahora": 1,
  "lluvia_3h": 1,
- "reportes": 6,
- "lloviendo": null
+ "reportes": 7,
+ "lloviendo": {
+  "hora": "2026-10-28T08:00",
+  "desde": "07:36"
+ }
 }
