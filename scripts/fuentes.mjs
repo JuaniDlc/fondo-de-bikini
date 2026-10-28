@@ -26,6 +26,8 @@ function horaDelReporte(fecha) {
  * Resume los reportes en las dos variables del modelo para la hora actual:
  * lluvia_ahora (en la última hora) y lluvia_3h (en las últimas 3). Si a alguna de esas horas
  * le falta reporte, la variable vale null, igual que en el entrenamiento.
+ * lloviendo: si algún reporte de la hora en curso (un especial, por ejemplo) ya trae lluvia,
+ * {hora: la hora en curso, desde: "HH:MM" del primero}; si no, null.
  * @param {{fecha: Date, metar: string}[]} reportes
  */
 export function resumirAeropuerto(reportes, horaActual) {
@@ -35,11 +37,16 @@ export function resumirAeropuerto(reportes, horaActual) {
     porHora.set(h, (porHora.get(h) ?? 0) || (huboLluvia(r.metar) ? 1 : 0));
   }
   const ultimas = [0, -1, -2].map((k) => porHora.get(sumarHoras(horaActual, k)));
+  const enCurso = sumarHoras(horaActual, 1);
+  const primera = reportes
+    .filter((r) => horaDelReporte(r.fecha) === enCurso && huboLluvia(r.metar))
+    .sort((a, b) => a.fecha - b.fecha)[0];
   return {
     hora: horaActual,
     lluvia_ahora: ultimas[0] ?? null,
     lluvia_3h: ultimas.every((v) => v !== undefined) ? Math.max(...ultimas) : null,
     reportes: reportes.length,
+    lloviendo: primera ? { hora: enCurso, desde: aLocal(primera.fecha).slice(11, 16) } : null,
   };
 }
 

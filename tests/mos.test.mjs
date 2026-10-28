@@ -59,12 +59,17 @@ test('resumen del aeropuerto para la hora actual', () => {
     r('2026-10-26T03:00:00Z', 'SEGU 260300Z 9999 SCT026'), // 22:00
   ];
   assert.deepEqual(resumirAeropuerto(reportes, '2026-10-25T22:00'),
-    { hora: '2026-10-25T22:00', lluvia_ahora: 0, lluvia_3h: 1, reportes: 3 });
+    { hora: '2026-10-25T22:00', lluvia_ahora: 0, lluvia_3h: 1, reportes: 3, lloviendo: null });
   // Falta el reporte de una de las 3 horas: lluvia_3h no se puede calcular
   assert.equal(resumirAeropuerto(reportes.slice(1), '2026-10-25T22:00').lluvia_3h, null);
   // Un especial a las 21:20 cuenta para la hora de las 22:00
   const especial = [...reportes, r('2026-10-26T02:20:00Z', 'SPECI SEGU 260220Z 4000 RA BKN020')];
   assert.equal(resumirAeropuerto(especial, '2026-10-25T22:00').lluvia_ahora, 1);
+  // Un especial con lluvia a las 22:37 (hora en curso): ya está lloviendo, pero no cambia la hora anterior
+  const enCurso = [...reportes, r('2026-10-26T03:37:00Z', 'SPECI SEGU 260337Z 8000 -RA BKN023')];
+  assert.deepEqual(resumirAeropuerto(enCurso, '2026-10-25T22:00').lloviendo,
+    { hora: '2026-10-25T23:00', desde: '22:37' });
+  assert.equal(resumirAeropuerto(enCurso, '2026-10-25T22:00').lluvia_ahora, 0);
 });
 
 test('lectura del índice de El Niño de CPC', () => {

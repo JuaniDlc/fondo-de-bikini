@@ -238,13 +238,19 @@ export function procesarRespuesta(
   // que es como se entrenó (para la hora T, el aeropuerto hasta T − k).
   const atrasoAeropuerto = aeropuerto?.hora ? horasEntre(aeropuerto.hora, horaActual) : NaN;
   const aeropuertoVigente = atrasoAeropuerto === 0 || atrasoAeropuerto === 1 ? aeropuerto : null;
-  const atraso = aeropuertoVigente ? atrasoAeropuerto : 0;
+  // Si un reporte de la hora siguiente al resumen ya trae lluvia (un especial, por ejemplo), esa
+  // hora ya cuenta como lluviosa y las siguientes se calculan desde ella. Si es la hora en curso,
+  // se muestra como observada (100 %).
+  const lloviendo = aeropuertoVigente?.lloviendo ?? null;
+  const resumen = lloviendo ? { hora: lloviendo.hora, lluvia_ahora: 1, lluvia_3h: 1 } : aeropuertoVigente;
+  const atraso = resumen ? horasEntre(resumen.hora, horaActual) : 0; // −1, 0 o 1
+  const observada = atraso === -1;
   // Los rayos se usan solo si se calcularon igual que para entrenar este modelo: justo después de
   // publicar un cambio, el navegador puede tener en caché el modelo anterior y los rayos nuevos.
   const desfaseRayos = rayos?.hasta ? horasEntre(horaActual, rayos.hasta) : NaN;
   const rayosVigentes = rayos?.version === META.rayos && desfaseRayos >= -1 / 3 && desfaseRayos <= 1
     ? rayos : null;
-  const contextoAhora = { nino, aeropuerto: aeropuertoVigente, rayos: rayosVigentes };
+  const contextoAhora = { nino, aeropuerto: resumen, rayos: rayosVigentes };
   /** Para la hora T0 + k: el modelo con k horas de anticipación, más el atraso del aeropuerto. */
   const contextoHora = (k) => ({ ...contextoAhora, adelanto: Math.min(k + atraso, ADELANTO_MAX) });
   // Condiciones de ahora y «próximas 6 h» (desde T0, con el aeropuerto hasta T0 si ya llegó)
@@ -258,9 +264,9 @@ export function procesarRespuesta(
   ]) ?? ['ninguna', null];
   // «Esta hora»: la hora en curso, con el aeropuerto hasta T0 como «lluvia previa»
   const iSig = modelos ? modelos.hourly.time.indexOf(horaLluvia) : -1;
-  const mosSig = iSig >= 0 ? probabilidadesMOS(modelos.hourly, iSig, contextoHora(1)) : null;
+  const mosSig = iSig >= 0 && !observada ? probabilidadesMOS(modelos.hourly, iSig, contextoHora(1)) : null;
   const ensSig = probabilidadEnsamble(series, horaLluvia);
-  const [fuente, pHora] = primeraDisponible([
+  const [fuente, pHora] = observada ? ['aeropuerto', 1] : primeraDisponible([
     ['corregido', mosSig?.hora],
     ['ensamble', ensSig?.probabilidad],
     ['heuristica', filaActual.heuristica / 100],
@@ -281,6 +287,7 @@ export function procesarRespuesta(
     usaAeropuerto: Boolean(mos?.usaAeropuerto),
     usaRayos: Boolean(mos?.usaRayos),
     aeropuerto: aeropuertoVigente,
+    lloviendo: observada ? lloviendo : null,
     rayos: rayosVigentes,
     ensamble6h: pct(ens?.ventana),
     modelos: ens ? {
@@ -305,7 +312,7 @@ export function procesarRespuesta(
     );
     // Para no mezclar fuentes en la gráfica: si la hora actual usa el modelo corregido,
     // las horas donde no se puede calcular (bordes de la ventana de datos) se omiten.
-    if (actual.fuente === 'corregido' && f.fuente !== 'corregido') return;
+    if (['corregido', 'aeropuerto'].includes(actual.fuente) && f.fuente !== 'corregido') return;
     (hora < horaLluvia ? pasado : proyeccion).push(f);
   });
 

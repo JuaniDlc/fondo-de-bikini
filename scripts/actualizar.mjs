@@ -67,6 +67,10 @@ const salidaActual = {
 await mkdir(carpeta, { recursive: true });
 await writeFile(new URL('actual.json', carpeta), `${JSON.stringify(salidaActual, null, 2)}\n`);
 if (nino) await writeFile(new URL('nino.json', carpeta), `${JSON.stringify(nino, null, 1)}\n`);
+if (aeropuerto) {
+  await writeFile(new URL('aeropuerto.json', carpeta),
+    `${JSON.stringify({ generado: new Date().toISOString(), ...aeropuerto }, null, 1)}\n`);
+}
 // Una fila por línea para que los diffs del repositorio sean legibles.
 await writeFile(
   new URL('historial.json', carpeta),

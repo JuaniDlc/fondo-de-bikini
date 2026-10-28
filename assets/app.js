@@ -106,13 +106,14 @@ function dibujar() {
   const fin = actual.horaLluvia ?? actual.hora;
   $('etiqueta').textContent = `Lluvia de ${horaCorta(inicio)} a ${horaCorta(fin)}`;
   $('prob').textContent = `${pHora} %`;
-  $('frase').textContent = frase(pHora);
+  $('frase').textContent = actual.lloviendo ? 'Está lloviendo en el aeropuerto' : frase(pHora);
   $('proximas').hidden = true; // el dato de 6 h solo se usa para los avisos
   const aero = actual.aeropuerto;
   $('aeropuerto').hidden = !aero || aero.lluvia_ahora === null;
   if (aero && aero.lluvia_ahora !== null) {
-    $('aeropuerto').textContent =
-      `Aeropuerto a las ${horaCorta(aero.hora)}: ${aero.lluvia_ahora ? 'lloviendo' : 'sin lluvia'}`;
+    $('aeropuerto').textContent = actual.lloviendo
+      ? `Aeropuerto: lloviendo desde las ${actual.lloviendo.desde}`
+      : `Aeropuerto a las ${horaCorta(aero.hora)}: ${aero.lluvia_ahora ? 'lloviendo' : 'sin lluvia'}`;
   }
   $('temp').innerHTML = `${num(actual.temperatura, 1)}<small> °C</small>`;
   $('hum').innerHTML = `${num(actual.humedad)}<small> %</small>`;
@@ -126,7 +127,9 @@ function dibujar() {
   const cuando = mayor.hora ? ` entre ${rangoHora(mayor.hora)} (${pMayor} %)` : ` (${pMayor} %)`;
   const aviso = $('aviso');
   aviso.hidden = pMayor < UMBRAL_ATENCION;
-  if (pMayor >= UMBRAL_PRECAUCION) {
+  if (actual.lloviendo) {
+    aviso.innerHTML = `<strong>Precaución:</strong> está lloviendo en el aeropuerto desde las ${actual.lloviendo.desde}. Lleva paraguas y evita las calles que suelen inundarse.`;
+  } else if (pMayor >= UMBRAL_PRECAUCION) {
     aviso.innerHTML = `<strong>Precaución:</strong> lluvia probable${cuando}. Lleva paraguas y evita las calles que suelen inundarse.`;
   } else if (pMayor >= UMBRAL_ATENCION) {
     aviso.innerHTML = `<strong>Atención:</strong> posible lluvia${cuando}. Ten el paraguas a mano.`;
@@ -300,7 +303,7 @@ function dibujarDebug() {
   if (!d) { caja.textContent = 'Sin detalle del modelo para esta lectura.'; return; }
   const f = (v, dec = 3) => (v === null || v === undefined ? '—' : num(v, dec));
   const m = actual.modelos;
-  const fuentes = { corregido: 'modelo corregido', ensamble: 'ensambles ECMWF + GFS', heuristica: 'heurística', ninguna: '—' };
+  const fuentes = { aeropuerto: 'lluvia observada en el aeropuerto', corregido: 'modelo corregido', ensamble: 'ensambles ECMWF + GFS', heuristica: 'heurística', ninguna: '—' };
   const filas = [
     ['Fuente: esta hora / 6 h', `${fuentes[actual.fuente]} / ${fuentes[actual.proximas6hFuente] ?? '—'}`],
     ['Usa el reporte del aeropuerto', actual.usaAeropuerto ? 'sí' : 'no'],
@@ -367,7 +370,8 @@ async function actualizarAhora({ automatico = false } = {}) {
     const [respuesta, rayos, aeropuerto] = await Promise.all([
       consultarOpenMeteo(),
       leerJSON('data/rayos.json').then((r) => r.modelo ?? null, () => estado.rayos),
-      leerJSON('data/actual.json').then((a) => a.aeropuerto ?? estado.aeropuerto, () => estado.aeropuerto),
+      leerJSON('data/aeropuerto.json').catch(() => leerJSON('data/actual.json').then((a) => a.aeropuerto))
+        .then((a) => a ?? estado.aeropuerto, () => estado.aeropuerto),
     ]);
     estado.rayos = rayos;
     estado.aeropuerto = aeropuerto;

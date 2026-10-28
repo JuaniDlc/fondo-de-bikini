@@ -35,6 +35,10 @@ jobs:
           pip install -q -r scripts/requirements-rayos.txt
           python scripts/rayos.py
 
+      - name: Reportes del aeropuerto
+        continue-on-error: true
+        run: node scripts/aeropuerto.mjs
+
       - name: Avisar por Telegram y WhatsApp
         env:
           CALLMEBOT_DESTINOS: ${{ secrets.CALLMEBOT_DESTINOS }}
@@ -42,20 +46,21 @@ jobs:
           TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
         run: node scripts/avisar.mjs
 
-      # Solo se guarda algo cuando cambia el estado de los avisos o los rayos que usa el modelo
-      # (o empieza otra hora), para no hacer un commit cada 10 minutos.
-      - name: Commit si cambió un aviso o los rayos
+      # Solo se guarda algo cuando cambia el estado de los avisos, el reporte del aeropuerto o los
+      # rayos que usa el modelo (o empieza otra hora), para no hacer un commit cada 10 minutos.
+      - name: Commit si cambió un aviso, el aeropuerto o los rayos
         env:
           GUARDAR_RAYOS: ${{ steps.rayos.outputs.guardar }}
         run: |
-          if [ "$GUARDAR_RAYOS" != "si" ] && git diff --quiet data/alertas.json 2>/dev/null && git ls-files --error-unmatch data/alertas.json >/dev/null 2>&1; then
-            echo "Sin cambios en los avisos ni en los rayos"
+          if [ "$GUARDAR_RAYOS" != "si" ] && [ -z "$(git status --porcelain data/alertas.json data/aeropuerto.json)" ]; then
+            echo "Sin cambios en los avisos, el aeropuerto ni los rayos"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/alertas.json data/rayos.json
-          git commit -m "Rayos $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
+          [ -f data/aeropuerto.json ] && git add data/aeropuerto.json
+          git commit -m "Rayos y aeropuerto $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
           # Si otro workflow guardó los mismos archivos, gana esta versión (la más reciente).
           for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; git rebase --abort 2>/dev/null; sleep 5; done
           exit 1

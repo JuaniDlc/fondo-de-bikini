@@ -40,7 +40,7 @@ async function lecturaDeAhora(guardada, rayos) {
   try {
     const { actual, proyeccion } = procesarRespuesta(await consultarOpenMeteo(), {
       nino: await leerJSON('nino.json', null),
-      aeropuerto: guardada?.aeropuerto ?? null,
+      aeropuerto: (await leerJSON('aeropuerto.json', null)) ?? guardada?.aeropuerto ?? null,
       rayos: rayos?.modelo ?? null,
     });
     return { ...actual, proyeccion, generado: new Date().toISOString() };

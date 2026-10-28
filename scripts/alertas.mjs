@@ -89,7 +89,7 @@ export function decidir(estado, actual, rayos, ahora = Date.now()) {
  */
 export function horaMasProbable(actual, ahora) {
   if (!actual?.generado || minutosDesde(actual.generado, ahora) > VIGENCIA_ACTUAL_MIN) return null;
-  if (actual.fuente !== 'corregido' || !actual.horaLluvia) return null;
+  if (!['corregido', 'aeropuerto'].includes(actual.fuente) || !actual.horaLluvia) return null;
   const enHoras = (local) => Date.parse(`${local}:00Z`) / 3600000; // horas locales, para restar
   const horas = [{ hora: actual.horaLluvia, probabilidad: actual.probabilidad }, ...(actual.proyeccion ?? [])]
     .filter((f) => enHoras(f.hora) - enHoras(actual.horaLluvia) < HORAS_LLUVIA)
@@ -102,6 +102,10 @@ const las = (h) => (h === 1 ? 'la 1' : `las ${h}`);
 const rango = (local) => `entre ${las((hora(local) + 23) % 24)} y ${las(hora(local))} h`;
 
 export function mensajeLluvia(mayor, actual) {
+  if (actual?.lloviendo && mayor.hora === actual.horaLluvia) {
+    return `🌧️ Lluvia en Fondo de Bikini: está lloviendo en el aeropuerto de Guayaquil desde las `
+      + `${actual.lloviendo.desde}. Lleva paraguas. ${PAGINA}`;
+  }
   const aero = actual?.aeropuerto?.lluvia_ahora === 1 ? ' Ya está lloviendo en el aeropuerto.' : '';
   return `🌧️ Lluvia en Fondo de Bikini: ${Math.round(mayor.probabilidad)} % de probabilidad de lluvia `
     + `en Guayaquil ${rango(mayor.hora)}.${aero} Lleva paraguas. ${PAGINA}`;
