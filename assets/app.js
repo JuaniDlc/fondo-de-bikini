@@ -26,6 +26,7 @@ const estado = {
   nino: null,        // índices de El Niño guardados por el workflow
   aeropuerto: null,  // último reporte del aeropuerto resumido por el workflow
   rayos: null,       // rayos de la última hora (data/rayos.json, cada 10 minutos)
+  ir: null,          // nubes de tormenta en la imagen infrarroja (data/infrarrojo.json, cada 10 minutos)
   lugares: null,     // pronóstico por lugar (data/lugares.json, del workflow cada 10 minutos)
 };
 
@@ -335,6 +336,9 @@ function dibujarDebug() {
     ['Fuente: esta hora / 6 h', `${fuentes[actual.fuente]} / ${fuentes[actual.proximas6hFuente] ?? '—'}`],
     ['Usa el reporte del aeropuerto', actual.usaAeropuerto ? 'sí' : 'no'],
     ['Usa los rayos del satélite (esta hora / 6 h)', `${actual.horaUsaRayos ? 'sí' : 'no'} / ${actual.usaRayos ? 'sí' : 'no'}`],
+    ['Usa el infrarrojo (esta hora)', actual.horaUsaIR ? 'sí' : 'no'],
+    ['Infrarrojo: nube más fría a 30 km / crecimiento en 30 min (K)', actual.ir
+      ? `${f(270 - actual.ir.ir_frio_30, 0)} / ${f(actual.ir.ir_crece_30, 1)}` : '—'],
     ['Rayos: más cercano en 20 min / acercándose', actual.rayos
       ? `${actual.rayos.cercania_20m > 0 ? `${f(-30 * Math.log(actual.rayos.cercania_20m), 0)} km` : 'ninguno'} / ${f(actual.rayos.acercamiento, 2)}`
       : '—'],
@@ -394,13 +398,15 @@ async function actualizarAhora({ automatico = false } = {}) {
   try {
     // El reporte del aeropuerto y los rayos solo los puede leer el workflow; se vuelven a pedir
     // porque cambian (el aeropuerto cada hora, los rayos cada 10 minutos).
-    const [respuesta, rayos, aeropuerto, lugares] = await Promise.all([
+    const [respuesta, rayos, aeropuerto, lugares, ir] = await Promise.all([
       consultarOpenMeteo(),
       leerJSON('data/rayos.json').then((r) => r.modelo ?? null, () => estado.rayos),
       leerJSON('data/aeropuerto.json').catch(() => leerJSON('data/actual.json').then((a) => a.aeropuerto))
         .then((a) => a ?? estado.aeropuerto, () => estado.aeropuerto),
       leerJSON('data/lugares.json').catch(() => estado.lugares),
+      leerJSON('data/infrarrojo.json').then((r) => r.modelo ?? null, () => estado.ir),
     ]);
+    estado.ir = ir;
     estado.rayos = rayos;
     estado.aeropuerto = aeropuerto;
     estado.lugares = lugares;
@@ -408,6 +414,7 @@ async function actualizarAhora({ automatico = false } = {}) {
       nino: estado.nino,
       aeropuerto: estado.aeropuerto,
       rayos: estado.rayos,
+      ir: estado.ir,
     });
     estado.actual = datos.actual;
     estado.proyeccion = datos.proyeccion;

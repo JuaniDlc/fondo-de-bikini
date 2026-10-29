@@ -119,6 +119,56 @@ def variables_rayos(bloques: pd.DataFrame, archivos_hora=ARCHIVOS_HORA) -> pd.Da
     return v
 
 
+RADIOS_IR = (15, 30, 60, 100)  # los mismos de scripts/infrarrojo.py
+IR = [f'ir_frio_{km}' for km in RADIOS_IR] + ['ir_frio_30_area', 'ir_frio_60_area', 'ir_frio_100_area',
+                                               'ir_muy_frio_60_area', 'ir_centro', 'ir_crece_30', 'ir_crece_60']
+ADELANTOS_IR = range(1, 5)  # a 5 y 6 horas el infrarrojo no ayuda (analisis/resultados.md)
+
+
+def imagenes_infrarrojo():
+    """Resumen de cada imagen infrarroja (analisis/datos/infrarrojo/, de infrarrojo_historial.py),
+    cada 10 minutos en hora local (inicio del escaneo)."""
+    archivos = sorted((DATOS / 'infrarrojo').glob('infrarrojo-*.csv'))
+    if not archivos:
+        return None
+    ir = pd.concat([pd.read_csv(a) for a in archivos])
+    ir['inicio'] = (pd.to_datetime(ir['inicio'], utc=True).dt.tz_convert('America/Guayaquil')
+                    .dt.tz_localize(None).dt.floor('10min'))
+    ir = ir.drop_duplicates('inicio').set_index('inicio').sort_index()
+    return ir.reindex(pd.date_range(ir.index.min(), ir.index.max(), freq='10min'))
+
+
+def variables_infrarrojo(ir):
+    """Variables del infrarrojo: en la hora T, la imagen que empezó a las T − 10 min y la de 30 min
+    antes. La misma cuenta hace scripts/infrarrojo.py en vivo (comprobar_infrarrojo lo verifica)."""
+    v = pd.DataFrame(index=ir.index)
+    for km in RADIOS_IR:
+        v[f'ir_frio_{km}'] = np.clip(270 - ir[f'tbmin_{km}'], 0, None)  # cuánto más fría que 270 K
+    for c in ('frio_30', 'frio_60', 'frio_100', 'muy_frio_60'):
+        v[f'ir_{c}_area'] = ir[c]
+    v['ir_centro'] = np.clip(270 - ir['tb_centro'], 0, None)
+    for km in (30, 60):
+        v[f'ir_crece_{km}'] = (ir[f'tbmin_{km}'].shift(3) - ir[f'tbmin_{km}']).clip(-30, 30)
+    v.index = v.index + pd.Timedelta(minutes=10)
+    return v[v.index.minute == 0]
+
+
+def comprobar_infrarrojo(ir, v):
+    """scripts/infrarrojo.py (en vivo) debe calcular lo mismo que variables_infrarrojo."""
+    import sys
+    sys.path.insert(0, str(AQUI.parent / 'scripts'))
+    from infrarrojo import variables_modelo
+    resumen = lambda t: None if t not in ir.index or ir.loc[t].isna().any() else ir.loc[t].to_dict()  # noqa: E731
+    frias = v.index[v['ir_frio_30'].fillna(0) > 20]
+    for t in list(frias[:: max(1, len(frias) // 20)]) + list(v.index[[100, 5000]]):
+        vivo = variables_modelo(resumen(t - pd.Timedelta(minutes=10)), resumen(t - pd.Timedelta(minutes=40)))
+        if vivo is None:
+            assert v.loc[t].isna().any(), t
+            continue
+        for c in IR:
+            assert abs(vivo[c] - v.loc[t, c]) < 1e-3, (t, c, vivo[c], v.loc[t, c])
+
+
 def bloques_rayos(carpeta=DATOS / 'rayos'):
     """Bloques de 10 minutos de analisis/datos/rayos/ (los escribe rayos_historial.py), en hora local."""
     archivos = sorted(carpeta.glob('rayos-*.csv'))
@@ -145,6 +195,14 @@ def rayos_por_hora():
     v = v[v.index.minute == 0]
     comprobar_rayos(b, v)
     return v
+
+
+def version_ir():
+    """Versión de las variables del infrarrojo de scripts/infrarrojo.py (meta.infrarrojo)."""
+    import sys
+    sys.path.insert(0, str(AQUI.parent / 'scripts'))
+    from infrarrojo import VERSION_IR
+    return VERSION_IR
 
 
 def version_rayos():
@@ -252,6 +310,11 @@ def cargar() -> pd.DataFrame:
     r = rayos_por_hora()
     if r is not None:
         df = df.join(r)  # en la hora T: rayos de T − 60 min a T
+    imagenes = imagenes_infrarrojo()
+    if imagenes is not None:
+        v = variables_infrarrojo(imagenes)
+        comprobar_infrarrojo(imagenes, v)
+        df = df.join(v)  # en la hora T: imagen de T − 10 min y de T − 40 min
 
     pres = p['pressure_msl_gfs_seamless']
     df['heuristica'] = heuristica(pres, pres.shift(3), p['temperature_2m_gfs_seamless'],
@@ -312,7 +375,7 @@ def entrenar(objetivo, df, extra=()):
     y = f'y_{objetivo}'
     # Todas las variantes de un objetivo usan las mismas horas: las que tienen reporte del aeropuerto
     # (y datos de rayos, si están descargados).
-    requeridas = METAR[objetivo] + [c for c in RAYOS if c in df]
+    requeridas = METAR[objetivo] + [c for c in RAYOS + (IR if objetivo == 'hora' else []) if c in df]
     datos = df.dropna(subset=cols + requeridas + [y, f'crudo_{objetivo}'])
     tr, te = datos[datos.index < CORTE], datos[datos.index >= CORTE]
     log = make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000)).fit(tr[cols], tr[y])
@@ -323,6 +386,7 @@ def entrenar(objetivo, df, extra=()):
 
 CON_METAR = 'MOS logística + lluvia en el aeropuerto (METAR)'
 CON_RAYOS = 'MOS logística + aeropuerto + rayos del satélite'
+CON_IR = 'MOS logística + aeropuerto + rayos + infrarrojo'
 
 
 def climatologia(tr, te, y):
@@ -366,6 +430,10 @@ def main():
             cols_r, _, te_r, log_r, _ = entrenar(objetivo, base, extra=METAR[objetivo] + RAYOS)
             assert te_r.index.equals(te.index)
             candidatos[CON_RAYOS] = log_r.predict_proba(te_r[cols_r])[:, 1]
+        if objetivo == 'hora' and 'ir_frio_30' in df:
+            cols_i, _, te_i, log_i, _ = entrenar(objetivo, base, extra=METAR[objetivo] + RAYOS + IR)
+            assert te_i.index.equals(te.index)
+            candidatos[CON_IR] = log_i.predict_proba(te_i[cols_i])[:, 1]
 
         informe += [f'## {titulo}', '',
                     f'Horas de prueba: {len(te):,}. Llovió en el {pct(yt.mean())} de ellas '
@@ -376,13 +444,13 @@ def main():
             m = metricas(yt, p, brier_clim)
             informe.append(f"| {nombre} | {m['brier']:.3f} | {m['mejora'] * 100:+.0f} % | {m['auc']:.2f} |")
 
-        mejor = CON_RAYOS if CON_RAYOS in candidatos else CON_METAR  # el que usa la página
+        mejor = next(c for c in (CON_IR, CON_RAYOS, CON_METAR) if c in candidatos)  # el que usa la página
         p = candidatos[mejor]
         informe += ['', f'**Calibración de «{mejor}»** (cuando dice X %, ¿cuánto llovió?):', '',
                     '| Pronóstico | Horas | Promedio pronosticado | Llovió de verdad |', '|---|---|---|---|']
         informe += [f"| {f['rango']} | {f['horas']:,} | {pct(f['pronostico'])} | {pct(f['llovio'])} |"
                     for f in tabla_calibracion(yt, p)]
-        for nombre in ('MOS: regresión logística', CON_METAR, CON_RAYOS):
+        for nombre in ('MOS: regresión logística', CON_METAR, CON_RAYOS, CON_IR):
             if nombre not in candidatos:
                 continue
             informe += ['', f'**Si se usara como alerta** («{nombre}»):', '',
@@ -441,7 +509,7 @@ def previas(df, k):
     d = df.copy()
     d['lluvia_previa'] = d['y_hora'].shift(k)
     d['lluvia_previa_3h'] = d['y_hora'].shift(k).rolling(3, min_periods=3).max()
-    for c in RAYOS:
+    for c in RAYOS + IR:
         if c in d:
             d[c] = df[c].shift(k)
     return d
@@ -464,6 +532,7 @@ def exportar_produccion(df, p):
     ajustar('6h', df, VARIABLES['6h'], 'y_6h')
     ajustar('6h_con_metar', df, VARIABLES['6h'] + PERSISTENCIA, 'y_6h')
     con_rayos = 'rayos_150_1h' in df
+    con_ir = con_rayos and 'ir_frio_30' in df
     if con_rayos:
         ajustar('6h_con_rayos', df, VARIABLES['6h'] + PERSISTENCIA + RAYOS, 'y_6h')
     # «La hora T» con la lluvia del aeropuerto (y los rayos) de k horas antes: un modelo por
@@ -473,11 +542,14 @@ def exportar_produccion(df, p):
         ajustar(nombre_previa(k), d, VARIABLES['hora'] + PREVIA, 'y_hora')
         if con_rayos:
             ajustar(f'hora_con_rayos_{k}', d, VARIABLES['hora'] + PREVIA + RAYOS, 'y_hora')
+        if con_ir and k in ADELANTOS_IR:
+            ajustar(f'hora_con_ir_{k}', d, VARIABLES['hora'] + PREVIA + RAYOS + IR, 'y_hora')
 
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
             'umbral_mm': UMBRAL_MM, 'ventana_h': VENTANA, 'modelos': MODELOS_VIVO,
-            **({'rayos': version_rayos()} if con_rayos else {})}
+            **({'rayos': version_rayos()} if con_rayos else {}),
+            **({'infrarrojo': version_ir()} if con_ir else {})}
     (raiz / 'assets' / 'mos-coeficientes.js').write_text(
         '// Generado por analisis/entrenar.py. No editar a mano: vuelve a correr el script.\n'
         f'export default {json.dumps({"meta": meta, **modelos}, indent=2, ensure_ascii=False)};\n',
@@ -518,6 +590,9 @@ def exportar_produccion(df, p):
             **({'rayos': {c: float(df.loc[t, c]) for c in RAYOS},
                 'rayos_previo': {str(k): {c: float(previas(df, k).loc[t, c]) for c in RAYOS} for k in ADELANTOS}}
                if con_rayos else {}),
+            # Infrarrojo de la hora antes de T − k (la hora T, k = 1 … 4)
+            **({'ir_previo': {str(k): {c: float(previas(df, k).loc[t, c]) for c in IR} for k in ADELANTOS_IR}}
+               if con_ir else {}),
             'esperado': esperado,
         })
     destino = raiz / 'tests' / 'fixtures'

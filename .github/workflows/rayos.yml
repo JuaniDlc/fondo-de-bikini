@@ -38,6 +38,13 @@ jobs:
           pip install -q -r scripts/requirements-rayos.txt
           python scripts/rayos.py
 
+      - name: Nubes de tormenta (infrarrojo de GOES-19)
+        continue-on-error: true
+        env:
+          LUGARES: ${{ secrets.LUGARES }}
+          LUGARES_IR: ${{ runner.temp }}/lugares-ir.json
+        run: python scripts/infrarrojo.py
+
       - name: Reportes del aeropuerto
         continue-on-error: true
         run: node scripts/aeropuerto.mjs
@@ -46,6 +53,7 @@ jobs:
         continue-on-error: true
         env:
           LUGARES_SALIDA: ${{ runner.temp }}/lugares-rayos.json
+          LUGARES_IR: ${{ runner.temp }}/lugares-ir.json
         run: node scripts/lugares.mjs
 
       - name: Avisar por Telegram y WhatsApp
@@ -61,14 +69,14 @@ jobs:
         env:
           GUARDAR_RAYOS: ${{ steps.rayos.outputs.guardar }}
         run: |
-          if [ "$GUARDAR_RAYOS" != "si" ] && [ -z "$(git status --porcelain data/alertas.json data/aeropuerto.json data/lugares.json)" ]; then
+          if [ "$GUARDAR_RAYOS" != "si" ] && [ -z "$(git status --porcelain data/alertas.json data/aeropuerto.json data/lugares.json data/infrarrojo.json)" ]; then
             echo "Sin cambios en los avisos, el aeropuerto ni los rayos"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/alertas.json data/rayos.json
-          for f in data/aeropuerto.json data/lugares.json; do if [ -f "$f" ]; then git add "$f"; fi; done
+          for f in data/aeropuerto.json data/lugares.json data/infrarrojo.json; do if [ -f "$f" ]; then git add "$f"; fi; done
           git commit -m "Rayos y aeropuerto $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
           # Si otro workflow guardó los mismos archivos, gana esta versión (la más reciente).
           for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; git rebase --abort 2>/dev/null; sleep 5; done

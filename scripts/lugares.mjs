@@ -1,6 +1,7 @@
 // Lo corre el workflow «Rayos» cada 10 minutos: el pronóstico por hora en el aeropuerto y en los
-// lugares del secreto LUGARES, con los rayos contados desde cada uno (los calcula scripts/rayos.py
-// en el archivo LUGARES_SALIDA, que no se guarda en el repositorio).
+// lugares del secreto LUGARES, con los rayos y el infrarrojo medidos desde cada uno (los calculan
+// scripts/rayos.py y scripts/infrarrojo.py en LUGARES_SALIDA y LUGARES_IR, que no se guardan en el
+// repositorio).
 // Escribe data/lugares.json solo con nombres y porcentajes: nunca coordenadas ni distancias, para
 // que no se pueda deducir dónde quedan. Solo lo reescribe si algo cambió al menos CAMBIO puntos.
 
@@ -13,6 +14,7 @@ const carpeta = new URL('../data/', import.meta.url);
 const leerJSON = (url) => readFile(url, 'utf8').then(JSON.parse, () => null);
 
 const rayos = await leerJSON(process.env.LUGARES_SALIDA);
+const ir = (await leerJSON(process.env.LUGARES_IR)) ?? {};
 if (!rayos) {
   console.log('Sin rayos por lugar: no se calcula.');
   process.exit(0);
@@ -23,7 +25,7 @@ const aeropuerto = (await leerJSON(new URL('aeropuerto.json', carpeta)))
 const respuesta = await consultarOpenMeteo();
 
 const lugares = Object.entries(rayos).map(([nombre, r]) => {
-  const { actual, proyeccion } = procesarRespuesta(respuesta, { nino, aeropuerto, rayos: r });
+  const { actual, proyeccion } = procesarRespuesta(respuesta, { nino, aeropuerto, rayos: r, ir: ir[nombre] ?? null });
   const horas = [{ hora: actual.horaLluvia, probabilidad: actual.probabilidad }, ...proyeccion].slice(0, HORAS);
   return {
     nombre,

@@ -4,7 +4,7 @@ Verdad: lluvia o llovizna reportada en el aeropuerto (SEGU). Entrenamiento: 2023
 
 ## ¿Llueve en esta hora?
 
-Horas de prueba: 15,366. Llovió en el 7 % de ellas (en entrenamiento: 6 %).
+Horas de prueba: 15,346. Llovió en el 7 % de ellas (en entrenamiento: 6 %).
 
 | Modelo | Brier (menor es mejor) | Mejora sobre climatología | AUC (0,5 = azar, 1 = perfecto) |
 |---|---|---|---|
@@ -15,30 +15,31 @@ Horas de prueba: 15,366. Llovió en el 7 % de ellas (en entrenamiento: 6 %).
 | MOS: gradient boosting | 0.049 | +14 % | 0.90 |
 | MOS logística + lluvia en el aeropuerto (METAR) | 0.031 | +45 % | 0.95 |
 | MOS logística + aeropuerto + rayos del satélite | 0.030 | +48 % | 0.96 |
+| MOS logística + aeropuerto + rayos + infrarrojo | 0.030 | +48 % | 0.96 |
 
-**Calibración de «MOS logística + aeropuerto + rayos del satélite»** (cuando dice X %, ¿cuánto llovió?):
+**Calibración de «MOS logística + aeropuerto + rayos + infrarrojo»** (cuando dice X %, ¿cuánto llovió?):
 
 | Pronóstico | Horas | Promedio pronosticado | Llovió de verdad |
 |---|---|---|---|
-| 0–10 % | 13,349 | 2 % | 1 % |
-| 10–20 % | 691 | 14 % | 11 % |
-| 20–30 % | 229 | 24 % | 23 % |
-| 30–40 % | 89 | 35 % | 39 % |
-| 40–50 % | 88 | 45 % | 39 % |
-| 50–60 % | 98 | 55 % | 48 % |
-| 60–70 % | 129 | 65 % | 54 % |
-| 70–80 % | 170 | 75 % | 72 % |
-| 80–90 % | 253 | 85 % | 81 % |
-| 90–100 % | 270 | 95 % | 90 % |
+| 0–10 % | 13,366 | 2 % | 1 % |
+| 10–20 % | 646 | 14 % | 13 % |
+| 20–30 % | 225 | 24 % | 20 % |
+| 30–40 % | 110 | 34 % | 33 % |
+| 40–50 % | 89 | 45 % | 43 % |
+| 50–60 % | 97 | 55 % | 48 % |
+| 60–70 % | 118 | 65 % | 58 % |
+| 70–80 % | 161 | 75 % | 69 % |
+| 80–90 % | 221 | 85 % | 81 % |
+| 90–100 % | 313 | 95 % | 90 % |
 
 **Si se usara como alerta** («MOS: regresión logística»):
 
 | Alerta cuando dice ≥ | Avisos por mes | Cuando alerta, llueve | Lluvias que detecta |
 |---|---|---|---|
-| 50 % | 7 | 56 % | 43 % |
-| 60 % | 5 | 65 % | 30 % |
-| 70 % | 3 | 72 % | 19 % |
-| 80 % | 2 | 83 % | 9 % |
+| 50 % | 7 | 55 % | 43 % |
+| 60 % | 5 | 64 % | 30 % |
+| 70 % | 3 | 71 % | 19 % |
+| 80 % | 2 | 83 % | 10 % |
 | 90 % | 0 | 100 % | 1 % |
 
 **Si se usara como alerta** («MOS logística + lluvia en el aeropuerto (METAR)»):
@@ -59,15 +60,25 @@ Horas de prueba: 15,366. Llovió en el 7 % de ellas (en entrenamiento: 6 %).
 | 60 % | 10 | 78 % | 62 % |
 | 70 % | 9 | 83 % | 55 % |
 | 80 % | 7 | 86 % | 43 % |
-| 90 % | 5 | 90 % | 23 % |
+| 90 % | 5 | 90 % | 24 % |
+
+**Si se usara como alerta** («MOS logística + aeropuerto + rayos + infrarrojo»):
+
+| Alerta cuando dice ≥ | Avisos por mes | Cuando alerta, llueve | Lluvias que detecta |
+|---|---|---|---|
+| 50 % | 11 | 75 % | 66 % |
+| 60 % | 10 | 79 % | 61 % |
+| 70 % | 9 | 82 % | 55 % |
+| 80 % | 7 | 86 % | 44 % |
+| 90 % | 5 | 90 % | 27 % |
 
 **Por periodo** (mejora sobre climatología; AUC):
 
 | Periodo | Horas | Llovió | Modelos crudos | Modelo de la página |
 |---|---|---|---|---|
-| Temporada lluviosa (ene–abr) | 5,506 | 15 % | -128 %; 0.81 | +47 %; 0.93 |
-| Temporada seca (may–dic) | 9,860 | 2 % | -227 %; 0.91 | +48 %; 0.96 |
-| Último mes (2026-10) | 637 | 13 % | -95 %; 0.87 | +61 %; 0.93 |
+| Temporada lluviosa (ene–abr) | 5,499 | 15 % | -129 %; 0.81 | +48 %; 0.93 |
+| Temporada seca (may–dic) | 9,847 | 2 % | -226 %; 0.91 | +49 %; 0.96 |
+| Último mes (2026-10) | 636 | 13 % | -94 %; 0.87 | +62 %; 0.92 |
 
 ## ¿Llueve en las próximas 6 horas?
 

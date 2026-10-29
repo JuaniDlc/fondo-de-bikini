@@ -214,11 +214,12 @@ function fila(hora, T, HR, P, P3, series, modelos, contexto) {
  * SEGU hasta T0 ({hora, lluvia_ahora, lluvia_3h}), que se usa si es de T0 o de T0 − 1;
  * contexto.rayos: rayos de la última hora (data/rayos.json → modelo, con «hasta» en hora local),
  * que solo se usan si terminan entre T0 − 20 min y T0 + 1 h (se entrenó con la hora antes de T0)
- * y son de la misma versión que el modelo (meta.rayos).
+ * y son de la misma versión que el modelo (meta.rayos); contexto.ir: lo mismo con el infrarrojo
+ * (data/infrarrojo.json → modelo, meta.infrarrojo).
  */
 export function procesarRespuesta(
   { clima, modelos = null, ensamble = null },
-  { nino = null, aeropuerto = null, rayos = null } = {},
+  { nino = null, aeropuerto = null, rayos = null, ir = null } = {},
 ) {
   const series = ensamble ? seriesEnsamble(ensamble) : null;
   const h = clima.hourly;
@@ -250,7 +251,10 @@ export function procesarRespuesta(
   const desfaseRayos = rayos?.hasta ? horasEntre(horaActual, rayos.hasta) : NaN;
   const rayosVigentes = rayos?.version === META.rayos && desfaseRayos >= -1 / 3 && desfaseRayos <= 1
     ? rayos : null;
-  const contextoAhora = { nino, aeropuerto: resumen, rayos: rayosVigentes };
+  // El infrarrojo (data/infrarrojo.json → modelo), con el mismo criterio que los rayos.
+  const desfaseIR = ir?.hasta ? horasEntre(horaActual, ir.hasta) : NaN;
+  const irVigente = ir?.version === META.infrarrojo && desfaseIR >= -1 / 3 && desfaseIR <= 1 ? ir : null;
+  const contextoAhora = { nino, aeropuerto: resumen, rayos: rayosVigentes, ir: irVigente };
   /** Para la hora T0 + k: el modelo con k horas de anticipación, más el atraso del aeropuerto. */
   const contextoHora = (k) => ({ ...contextoAhora, adelanto: Math.min(k + atraso, ADELANTO_MAX) });
   // Condiciones de ahora y «próximas 6 h» (desde T0, con el aeropuerto hasta T0 si ya llegó)
@@ -280,6 +284,7 @@ export function procesarRespuesta(
     ensamble: pct(ensSig?.probabilidad),
     horaUsaAeropuerto: Boolean(mosSig?.horaUsaAeropuerto),
     horaUsaRayos: Boolean(mosSig?.horaUsaRayos),
+    horaUsaIR: Boolean(mosSig?.horaUsaIR),
     momento: c.time,
     presion3h: P3,
     proximas6h: pct(p6),
@@ -289,6 +294,7 @@ export function procesarRespuesta(
     aeropuerto: aeropuertoVigente,
     lloviendo: observada ? lloviendo : null,
     rayos: rayosVigentes,
+    ir: irVigente,
     ensamble6h: pct(ens?.ventana),
     modelos: ens ? {
       ahora: Object.fromEntries(Object.entries(ens.modelos).map(([k, v]) => [k, pct(v)])),

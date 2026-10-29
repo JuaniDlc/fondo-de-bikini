@@ -42,6 +42,7 @@ async function lecturaDeAhora(guardada, rayos) {
       nino: await leerJSON('nino.json', null),
       aeropuerto: (await leerJSON('aeropuerto.json', null)) ?? guardada?.aeropuerto ?? null,
       rayos: rayos?.modelo ?? null,
+      ir: (await leerJSON('infrarrojo.json', null))?.modelo ?? null,
     });
     return { ...actual, proyeccion, generado: new Date().toISOString() };
   } catch (e) {

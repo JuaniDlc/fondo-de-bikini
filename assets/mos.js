@@ -22,6 +22,12 @@ export const VARIABLES_RAYOS = [
   'rayos_60_20m', 'cercania_20m', 'cercania_1h', 'acercamiento',
 ];
 
+/** Variables del infrarrojo que escribe scripts/infrarrojo.py en data/infrarrojo.json (modelo). */
+export const VARIABLES_IR = [
+  'ir_frio_15', 'ir_frio_30', 'ir_frio_60', 'ir_frio_100', 'ir_frio_30_area', 'ir_frio_60_area',
+  'ir_frio_100_area', 'ir_muy_frio_60_area', 'ir_centro', 'ir_crece_30', 'ir_crece_60',
+];
+
 const esNumero = (v) => typeof v === 'number' && Number.isFinite(v);
 
 /** Valores de una columna en los índices [desde, hasta]; null si falta alguno. */
@@ -55,7 +61,7 @@ export function ninoVigente(nino, local) {
  * Variables de entrada para la hora con índice i de la respuesta horaria multimodelo.
  * Una variable vale null si faltan datos para calcularla.
  */
-export function variablesMOS(hourly, i, { nino, aeropuerto, rayos } = {}) {
+export function variablesMOS(hourly, i, { nino, aeropuerto, rayos, ir } = {}) {
   const local = hourly.time[i];
   const hora = Number(local.slice(11, 13));
   const dia = diaDelAno(local);
@@ -76,6 +82,8 @@ export function variablesMOS(hourly, i, { nino, aeropuerto, rayos } = {}) {
   };
   // Rayos de la última hora (scripts/rayos.py), con el mismo criterio que el aeropuerto.
   for (const nombre of VARIABLES_RAYOS) v[nombre] = rayos?.[nombre] ?? null;
+  // Infrarrojo (nubes de tormenta) de la última imagen, igual que los rayos.
+  for (const nombre of VARIABLES_IR) v[nombre] = ir?.[nombre] ?? null;
   const llueve2h = [];
   for (const [corto, modelo] of Object.entries(MODELOS_MOS)) {
     const col = `precipitation_${modelo}`;
@@ -126,6 +134,8 @@ export function aplicarMOS(nombre, variables) {
 export const modeloPrevia = (adelanto) => (adelanto === 1 ? 'hora_con_metar' : `hora_con_metar_${adelanto}`);
 /** Igual, con los rayos de la hora antes de i − adelanto. */
 export const modeloRayos = (adelanto) => `hora_con_rayos_${adelanto}`;
+/** Igual, con los rayos y el infrarrojo (solo hasta 4 horas de anticipación). */
+export const modeloInfrarrojo = (adelanto) => `hora_con_ir_${adelanto}`;
 
 /**
  * Probabilidades del modelo corregido para la hora con índice i (la hora i acumula la lluvia
@@ -137,14 +147,16 @@ export function probabilidadesMOS(hourly, i, contexto = {}) {
   const v = variablesMOS(hourly, i, contexto);
   const adelanto = contexto.adelanto ?? 1;
   const intentar = (nombre) => (COEF[nombre] ? aplicarMOS(nombre, v) : null);
+  const horaIR = intentar(modeloInfrarrojo(adelanto));
   const horaRayos = intentar(modeloRayos(adelanto));
   const horaMetar = intentar(modeloPrevia(adelanto));
   const seisRayos = intentar('6h_con_rayos');
   const seisMetar = aplicarMOS('6h_con_metar', v);
   return {
-    hora: horaRayos ?? horaMetar ?? aplicarMOS('hora', v),
-    horaUsaAeropuerto: (horaRayos ?? horaMetar) !== null,
-    horaUsaRayos: horaRayos !== null,
+    hora: horaIR ?? horaRayos ?? horaMetar ?? aplicarMOS('hora', v),
+    horaUsaAeropuerto: (horaIR ?? horaRayos ?? horaMetar) !== null,
+    horaUsaRayos: (horaIR ?? horaRayos) !== null,
+    horaUsaIR: horaIR !== null,
     proximas6h: seisRayos ?? seisMetar ?? aplicarMOS('6h', v),
     usaAeropuerto: (seisRayos ?? seisMetar) !== null,
     usaRayos: seisRayos !== null,

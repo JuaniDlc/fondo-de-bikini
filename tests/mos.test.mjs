@@ -15,9 +15,9 @@ test('el modelo corregido da en JavaScript lo mismo que en Python', () => {
     // hasta T − k; los de 6 h, hasta T.
     const v = variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto, rayos: c.rayos });
     for (const [nombre, esperado] of Object.entries(c.esperado)) {
-      const k = nombre === 'hora_con_metar' ? '1' : nombre.match(/^hora_con_(?:metar|rayos)_(\d)$/)?.[1];
+      const k = nombre === 'hora_con_metar' ? '1' : nombre.match(/^hora_con_(?:metar|rayos|ir)_(\d)$/)?.[1];
       const vk = k ? variablesMOS(c.hourly, i, {
-        nino: c.nino, aeropuerto: c.aeropuerto_previo[k], rayos: c.rayos_previo?.[k],
+        nino: c.nino, aeropuerto: c.aeropuerto_previo[k], rayos: c.rayos_previo?.[k], ir: c.ir_previo?.[k],
       }) : v;
       const p = aplicarMOS(nombre, vk);
       assert.ok(Math.abs(p - esperado) < 1e-5, `${c.hora} ${nombre}: ${p} ≠ ${esperado}`);
