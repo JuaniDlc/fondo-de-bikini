@@ -1,23 +1,23 @@
 {
- "generado": "2026-10-29T06:50:23Z",
+ "generado": "2026-10-29T07:00:21Z",
  "minutos": 10,
- "archivos": 29,
+ "archivos": 28,
  "radio_km": 60,
  "rayos": 0,
  "rayos_cerca": 0,
  "mas_cercano_km": null,
  "rumbo": null,
  "modelo": {
-  "hasta": "2026-10-29T01:50",
+  "hasta": "2026-10-29T02:00",
   "version": "todos-20s",
   "rayos_15_1h": 0.0,
   "rayos_30_1h": 0.0,
-  "rayos_60_1h": 1.791759,
-  "rayos_100_1h": 6.309918,
-  "rayos_150_1h": 5.236442,
+  "rayos_60_1h": 0.0,
+  "rayos_100_1h": 6.246107,
+  "rayos_150_1h": 5.493061,
   "rayos_60_20m": 0.0,
-  "cercania_20m": 0.125418,
-  "cercania_1h": 0.157661,
-  "acercamiento": -0.032243
+  "cercania_20m": 0.125682,
+  "cercania_1h": 0.135206,
+  "acercamiento": -0.009525
  }
 }
