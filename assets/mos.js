@@ -9,8 +9,11 @@ export const META = COEF.meta;
 const UMBRAL_MM = COEF.meta.umbral_mm;
 const VENTANA = COEF.meta.ventana_h;
 
-/** Modelo de Open-Meteo de cada fuente, tal como aparece en las columnas de la respuesta. */
-export const MODELOS_MOS = { gfs: 'gfs_seamless', ecmwf: 'ecmwf_ifs025', icon: 'icon_seamless' };
+/**
+ * Modelo de Open-Meteo de cada fuente, tal como aparece en las columnas de la respuesta. Viene con
+ * los coeficientes, así la página siempre pide los modelos con que se entrenó.
+ */
+export const MODELOS_MOS = COEF.meta.modelos ?? { gfs: 'gfs_seamless', ecmwf: 'ecmwf_ifs025', icon: 'icon_seamless' };
 export const VARIABLES_MOS = ['precipitation', 'cape', 'relative_humidity_2m', 'cloud_cover'];
 
 /** Variables de rayos que escribe scripts/rayos.py en data/rayos.json (modelo). */

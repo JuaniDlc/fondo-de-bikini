@@ -29,7 +29,11 @@ DATOS = AQUI / 'datos'
 CORTE = pd.Timestamp('2025-01-01')  # entrena antes de esta fecha, evalúa desde ella
 UMBRAL_MM = 0.1
 VENTANA = 6
-MODELOS = {'gfs': 'gfs_seamless', 'ecmwf': 'ecmwf', 'icon': 'icon_seamless'}
+MODELOS = {'gfs': 'gfs_seamless', 'ecmwf': 'ecmwf', 'icon': 'icon_seamless',
+           'ukmo': 'ukmo_global_deterministic_10km', 'jma': 'jma_gsm', 'ecmwf9': 'ecmwf_ifs'}
+# Los mismos modelos con el nombre que usa Open-Meteo en vivo (en el historial, ecmwf es la unión de
+# ecmwf_ifs04 y ecmwf_ifs025). Va en meta.modelos de los coeficientes y la página pide esos.
+MODELOS_VIVO = {**MODELOS, 'ecmwf': 'ecmwf_ifs025'}
 UMBRALES_ALERTA = [0.5, 0.6, 0.7, 0.8, 0.9]
 
 # ---------- verdad: lluvia reportada en el aeropuerto ----------
@@ -415,6 +419,9 @@ COLUMNAS_FIXTURE = {
     'precipitation_gfs_seamless': 'precipitation_gfs_seamless',
     'precipitation_ecmwf_ifs025': 'precipitation_ecmwf',  # en vivo solo existe ifs025
     'precipitation_icon_seamless': 'precipitation_icon_seamless',
+    'precipitation_ukmo_global_deterministic_10km': 'precipitation_ukmo_global_deterministic_10km',
+    'precipitation_jma_gsm': 'precipitation_jma_gsm',
+    'precipitation_ecmwf_ifs': 'precipitation_ecmwf_ifs',
     'cape_gfs_seamless': 'cape_gfs_seamless',
     'cape_icon_seamless': 'cape_icon_seamless',
     'relative_humidity_2m_gfs_seamless': 'relative_humidity_2m_gfs_seamless',
@@ -469,7 +476,7 @@ def exportar_produccion(df, p):
 
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
-            'umbral_mm': UMBRAL_MM, 'ventana_h': VENTANA,
+            'umbral_mm': UMBRAL_MM, 'ventana_h': VENTANA, 'modelos': MODELOS_VIVO,
             **({'rayos': version_rayos()} if con_rayos else {})}
     (raiz / 'assets' / 'mos-coeficientes.js').write_text(
         '// Generado por analisis/entrenar.py. No editar a mano: vuelve a correr el script.\n'

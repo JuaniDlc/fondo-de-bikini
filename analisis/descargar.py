@@ -25,6 +25,8 @@ VARIABLES = ['precipitation', 'cape', 'relative_humidity_2m', 'temperature_2m', 
              'wind_speed_10m', 'wind_direction_10m', 'showers']
 # ecmwf_ifs04 cubre 2023 y se une con ecmwf_ifs025, que empieza en 2024.
 MODELOS = ['gfs_seamless', 'ecmwf_ifs025', 'ecmwf_ifs04', 'icon_seamless']
+# Más modelos, solo la lluvia: mejoran el pronóstico a 3-6 horas (UKMO 10 km, JMA, ECMWF 9 km).
+MODELOS_LLUVIA = ['ukmo_global_deterministic_10km', 'jma_gsm', 'ecmwf_ifs']
 
 
 def metar(fin: dt.date) -> pd.DataFrame:
@@ -44,17 +46,21 @@ def pronosticos(fin: dt.date) -> pd.DataFrame:
     desde = INICIO
     while desde <= fin:
         hasta = min(dt.date(desde.year, 12, 31), fin)
-        r = requests.get(
-            'https://historical-forecast-api.open-meteo.com/v1/forecast',
-            params={
-                'latitude': LAT, 'longitude': LON, 'timezone': ZONA,
-                'start_date': desde.isoformat(), 'end_date': hasta.isoformat(),
-                'hourly': ','.join(VARIABLES), 'models': ','.join(MODELOS),
-            },
-            timeout=600,
-        )
-        r.raise_for_status()
-        partes.append(pd.DataFrame(r.json()['hourly']))
+        bloque = None
+        for variables, modelos in ((VARIABLES, MODELOS), (['precipitation'], MODELOS_LLUVIA)):
+            r = requests.get(
+                'https://historical-forecast-api.open-meteo.com/v1/forecast',
+                params={
+                    'latitude': LAT, 'longitude': LON, 'timezone': ZONA,
+                    'start_date': desde.isoformat(), 'end_date': hasta.isoformat(),
+                    'hourly': ','.join(variables), 'models': ','.join(modelos),
+                },
+                timeout=600,
+            )
+            r.raise_for_status()
+            d = pd.DataFrame(r.json()['hourly'])
+            bloque = d if bloque is None else bloque.merge(d, on='time', how='outer')
+        partes.append(bloque)
         print(f'  pronósticos {desde} → {hasta}')
         desde = hasta + dt.timedelta(days=1)
     return pd.concat(partes, ignore_index=True)
