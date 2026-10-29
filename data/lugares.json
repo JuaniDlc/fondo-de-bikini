@@ -1,0 +1,35 @@
+{
+ "generado": "2026-10-29T00:17:01.895Z",
+ "lugares": [
+  {
+   "nombre": "Aeropuerto",
+   "usaRayos": true,
+   "horas": [
+    {
+     "hora": "2026-10-28T20:00",
+     "probabilidad": 8
+    },
+    {
+     "hora": "2026-10-28T21:00",
+     "probabilidad": 15
+    },
+    {
+     "hora": "2026-10-28T22:00",
+     "probabilidad": 29
+    },
+    {
+     "hora": "2026-10-28T23:00",
+     "probabilidad": 35
+    },
+    {
+     "hora": "2026-10-29T00:00",
+     "probabilidad": 41
+    },
+    {
+     "hora": "2026-10-29T01:00",
+     "probabilidad": 44
+    }
+   ]
+  }
+ ]
+}
