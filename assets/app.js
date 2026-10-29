@@ -26,6 +26,7 @@ const estado = {
   nino: null,        // índices de El Niño guardados por el workflow
   aeropuerto: null,  // último reporte del aeropuerto resumido por el workflow
   rayos: null,       // rayos de la última hora (data/rayos.json, cada 10 minutos)
+  lugares: null,     // pronóstico por lugar (data/lugares.json, del workflow cada 10 minutos)
 };
 
 // ---------- formato ----------
@@ -120,6 +121,7 @@ function dibujar() {
   $('pres').innerHTML = `${num(actual.presion, 1)}<small> hPa</small>`;
 
   dibujarHoras();
+  dibujarLugares();
 
   // Aviso sobre la hora más probable de la tabla
   const mayor = proximasHoras().reduce((a, b) => (b.probabilidad > a.probabilidad ? b : a), { probabilidad: pHora });
@@ -176,6 +178,31 @@ function dibujarHoras() {
     return `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
       + `<td>${barra(p, 'hora')}</td></tr>`;
   }).join('');
+}
+
+const VIGENCIA_LUGARES_MIN = 75; // lugares.json se reescribe al menos cada hora
+const escapar = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+/**
+ * Tabla por lugar (aeropuerto y los lugares del secreto LUGARES): la calcula el workflow cada
+ * 10 minutos con los rayos contados desde cada lugar. Solo trae nombres y porcentajes.
+ */
+function dibujarLugares() {
+  const datos = estado.lugares;
+  const vigente = datos?.generado && Date.now() - Date.parse(datos.generado) < VIGENCIA_LUGARES_MIN * 60000;
+  const lugares = vigente && Array.isArray(datos.lugares) ? datos.lugares : [];
+  const desde = estado.actual.horaLluvia ?? estado.actual.hora;
+  const horas = (lugares[0]?.horas ?? []).map((h) => h.hora).filter((h) => h >= desde);
+  $('lugares').hidden = lugares.length < 2 || !horas.length;
+  if ($('lugares').hidden) return;
+  const h = (local) => Number(local.slice(11, 13));
+  const celda = (p) => (p === undefined ? '<td>—</td>'
+    : `<td><b>${p} %</b><span class="barra hora"><span style="width:${p}%"></span></span></td>`);
+  $('lugares-cabecera').innerHTML = '<th scope="col">Hora</th>'
+    + lugares.map((l) => `<th scope="col">${escapar(l.nombre)}</th>`).join('');
+  $('lugares-filas').innerHTML = horas.map((hora) => `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
+    + lugares.map((l) => celda(l.horas.find((x) => x.hora === hora)?.probabilidad)).join('') + '</tr>').join('');
+  $('lugares-nota').textContent = `Con los rayos contados desde cada lugar. Calculado a las ${fmtHora.format(new Date(datos.generado))}.`;
 }
 
 // ---------- gráfica (SVG a mano) ----------
@@ -367,14 +394,16 @@ async function actualizarAhora({ automatico = false } = {}) {
   try {
     // El reporte del aeropuerto y los rayos solo los puede leer el workflow; se vuelven a pedir
     // porque cambian (el aeropuerto cada hora, los rayos cada 10 minutos).
-    const [respuesta, rayos, aeropuerto] = await Promise.all([
+    const [respuesta, rayos, aeropuerto, lugares] = await Promise.all([
       consultarOpenMeteo(),
       leerJSON('data/rayos.json').then((r) => r.modelo ?? null, () => estado.rayos),
       leerJSON('data/aeropuerto.json').catch(() => leerJSON('data/actual.json').then((a) => a.aeropuerto))
         .then((a) => a ?? estado.aeropuerto, () => estado.aeropuerto),
+      leerJSON('data/lugares.json').catch(() => estado.lugares),
     ]);
     estado.rayos = rayos;
     estado.aeropuerto = aeropuerto;
+    estado.lugares = lugares;
     const datos = procesarRespuesta(respuesta, {
       nino: estado.nino,
       aeropuerto: estado.aeropuerto,

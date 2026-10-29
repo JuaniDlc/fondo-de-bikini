@@ -5,6 +5,11 @@ archivo público de NOAA en AWS, se queda con los rayos a menos de RADIO_KM de G
 escribe data/rayos.json con cuántos hay, el más cercano y hacia dónde están.
 
 Lo corre el workflow «Rayos» cada 10 minutos.
+
+Si existen las variables de entorno LUGARES («Nombre:lat,lon;Nombre:lat,lon», del secreto de
+GitHub) y LUGARES_SALIDA (un archivo fuera de data/), calcula además las variables del modelo
+desde el aeropuerto y desde cada lugar, y las escribe ahí para scripts/lugares.mjs. Ese archivo
+no se guarda en el repositorio y nunca se imprimen coordenadas ni distancias de los lugares.
 """
 
 import datetime as dt
@@ -27,6 +32,7 @@ CERCA_KM = 25
 BUCKET = 'https://noaa-goes19.s3.amazonaws.com/'
 SALIDA = Path(__file__).resolve().parent.parent / 'data' / 'rayos.json'
 RUMBOS = ['norte', 'noreste', 'este', 'sureste', 'sur', 'suroeste', 'oeste', 'noroeste']
+AEROPUERTO = (-2.1572, -79.8836)  # SEGU
 
 
 def archivos(desde: dt.datetime, hasta: dt.datetime) -> list[str]:
@@ -44,10 +50,10 @@ def archivos(desde: dt.datetime, hasta: dt.datetime) -> list[str]:
     return claves
 
 
-def distancia_y_rumbo(lat, lon):
-    """Distancia (km) y rumbo (grados desde el norte) desde Guayaquil."""
-    f1, f2 = math.radians(LAT), np.radians(lat)
-    dl = np.radians(lon - LON)
+def distancia_y_rumbo(lat, lon, centro=(LAT, LON)):
+    """Distancia (km) y rumbo (grados desde el norte) desde Guayaquil (o desde centro)."""
+    f1, f2 = math.radians(centro[0]), np.radians(lat)
+    dl = np.radians(lon - centro[1])
     a = np.sin((f2 - f1) / 2) ** 2 + math.cos(f1) * np.cos(f2) * np.sin(dl / 2) ** 2
     d = 2 * 6371 * np.arcsin(np.sqrt(a))
     rumbo = np.degrees(np.arctan2(np.sin(dl) * np.cos(f2),
@@ -63,9 +69,9 @@ ANILLOS_KM = (15, 30, 60, 100, 150)
 VERSION_RAYOS = 'todos-20s'
 
 
-def resumen_anillos(lat, lon):
+def resumen_anillos(lat, lon, centro=(LAT, LON)):
     """Cuántos rayos hay en cada anillo y la distancia del más cercano (inf si no hay)."""
-    d, _ = distancia_y_rumbo(np.asarray(lat, dtype=float), np.asarray(lon, dtype=float))
+    d, _ = distancia_y_rumbo(np.asarray(lat, dtype=float), np.asarray(lon, dtype=float), centro)
     cuentas, desde = {}, 0
     for hasta in ANILLOS_KM:
         cuentas[hasta] = int(((d > desde) & (d <= hasta)).sum()) if desde else int((d <= hasta).sum())
@@ -93,8 +99,9 @@ def variables_modelo(bloques):
     return {k: round(x, 6) for k, x in v.items()}
 
 
-def bloques_ultima_hora(hasta: dt.datetime, leer_archivo):
-    """Bloques de 10 minutos de [hasta − 60 min, hasta) con todos los archivos."""
+def bloques_ultima_hora(hasta: dt.datetime, leer_archivo, centro=(LAT, LON)):
+    """Bloques de 10 minutos de [hasta − 60 min, hasta) con todos los archivos, contando los
+    rayos desde centro."""
     claves = archivos(hasta - dt.timedelta(minutes=60), hasta)
     bloques = [{'archivos': 0, **{f'r{k}': 0 for k in ANILLOS_KM}, 'dmin': math.inf} for _ in range(6)]
     with ThreadPoolExecutor(16) as ex:
@@ -103,7 +110,7 @@ def bloques_ultima_hora(hasta: dt.datetime, leer_archivo):
         m = re.search(r'_s(\d{4})(\d{3})(\d{2})(\d{2})(\d{2})', clave)
         inicio = dt.datetime.strptime(''.join(m.groups()), '%Y%j%H%M%S').replace(tzinfo=dt.timezone.utc)
         b = bloques[int((inicio - (hasta - dt.timedelta(minutes=60))).total_seconds() // 600)]
-        cuentas, d = resumen_anillos(lat, lon)
+        cuentas, d = resumen_anillos(lat, lon, centro)
         b['archivos'] += 1
         for k, x in cuentas.items():
             b[f'r{k}'] += x
@@ -136,6 +143,26 @@ def avisar_si_hay_que_guardar(modelo):
     if salida:
         with open(salida, 'a', encoding='utf-8') as f:
             f.write(f'guardar={"si" if guardar else "no"}\n')
+
+
+def leer_lugares(texto):
+    """«Nombre:latitud,longitud;Nombre:latitud,longitud» → {'Nombre': (latitud, longitud), …}."""
+    lugares = {}
+    for parte in filter(None, (p.strip() for p in (texto or '').split(';'))):
+        nombre, coordenadas = parte.rsplit(':', 1)
+        lat, lon = (float(x) for x in coordenadas.split(','))
+        lugares[nombre.strip()] = (lat, lon)
+    return lugares
+
+
+def variables_por_lugar(hasta, leer_archivo, lugares):
+    """Variables del modelo contando los rayos desde el aeropuerto y desde cada lugar."""
+    salida = {}
+    for nombre, centro in {'Aeropuerto': AEROPUERTO, **lugares}.items():
+        v = variables_modelo(bloques_ultima_hora(hasta, leer_archivo, centro))
+        salida[nombre] = None if v is None else {
+            'hasta': (hasta - dt.timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M'), 'version': VERSION_RAYOS, **v}
+    return salida
 
 
 def main():
@@ -178,6 +205,10 @@ def main():
     SALIDA.parent.mkdir(exist_ok=True)
     SALIDA.write_text(json.dumps(resultado, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
     print(json.dumps(resultado, ensure_ascii=False))
+    if os.environ.get('LUGARES_SALIDA'):
+        por_lugar = variables_por_lugar(hasta, leer_una_vez, leer_lugares(os.environ.get('LUGARES')))
+        Path(os.environ['LUGARES_SALIDA']).write_text(json.dumps(por_lugar), encoding='utf-8')
+        print(f'Rayos por lugar: {", ".join(por_lugar)}')
     if not claves:
         raise SystemExit('No se encontraron archivos del satélite en los últimos minutos')
 

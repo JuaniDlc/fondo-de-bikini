@@ -63,6 +63,10 @@ Los secretos se guardan en **Settings → Secrets and variables → Actions → 
 1. Cada persona activa CallMeBot desde su WhatsApp siguiendo las instrucciones de su página y recibe una clave (apikey).
 2. Secreto `CALLMEBOT_DESTINOS` con el formato `+593XXXXXXXXX:clave` (varios separados por `;`).
 
+## Pronóstico por lugar
+
+Además del aeropuerto, la página puede mostrar la tabla «Por lugar» para otros puntos de la ciudad, con los rayos contados desde cada uno (`scripts/rayos.py` y `scripts/lugares.mjs`, en el workflow «Rayos»). Las coordenadas van solo en el secreto `LUGARES`, con el formato `Lugar A:<latitud>,<longitud>;Lugar B:<latitud>,<longitud>`. El repositorio y la página son públicos, así que nunca se escriben coordenadas ni distancias de los lugares: `data/lugares.json` solo lleva nombres y porcentajes, y los registros del workflow solo los nombres.
+
 ## En local
 
 Necesitas Node 20 o superior.

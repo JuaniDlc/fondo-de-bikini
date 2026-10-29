@@ -175,6 +175,10 @@ button:focus-visible { outline: 3px solid var(--tendencia); outline-offset: 2px;
 .barra > span { display: block; height: 100%; border-radius: 4px; }
 .barra.hora > span { background: var(--serie); }
 .nota { margin: 0.6rem 0 0; font-size: 0.8rem; color: var(--texto-2); }
+.lugares td { width: auto; text-align: center; }
+.lugares thead th:not(:first-child) { text-align: center; }
+.lugares td b { display: block; font-weight: 600; }
+.lugares td .barra { display: block; width: 100%; height: 6px; margin-top: 0.2rem; }
 
 footer { font-size: 0.8rem; color: var(--tenue); text-align: center; }
 footer a { color: inherit; }
