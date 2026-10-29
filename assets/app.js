@@ -203,7 +203,7 @@ function dibujarLugares() {
     + lugares.map((l) => `<th scope="col">${escapar(l.nombre)}</th>`).join('');
   $('lugares-filas').innerHTML = horas.map((hora) => `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
     + lugares.map((l) => celda(l.horas.find((x) => x.hora === hora)?.probabilidad)).join('') + '</tr>').join('');
-  $('lugares-nota').textContent = `Con los rayos contados desde cada lugar. Calculado a las ${fmtHora.format(new Date(datos.generado))}.`;
+  $('lugares-nota').textContent = `Con los rayos y las nubes de tormenta medidos desde cada lugar. Calculado a las ${fmtHora.format(new Date(datos.generado))}.`;
 }
 
 // ---------- gráfica (SVG a mano) ----------
