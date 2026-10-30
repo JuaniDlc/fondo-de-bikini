@@ -1,25 +1,21 @@
 {
- "generado": "2026-10-30T14:50:18.981Z",
+ "generado": "2026-10-30T15:00:25.614Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-10-30T10:00",
-     "probabilidad": 74
-    },
-    {
      "hora": "2026-10-30T11:00",
-     "probabilidad": 62
+     "probabilidad": 58
     },
     {
      "hora": "2026-10-30T12:00",
-     "probabilidad": 27
+     "probabilidad": 24
     },
     {
      "hora": "2026-10-30T13:00",
-     "probabilidad": 28
+     "probabilidad": 24
     },
     {
      "hora": "2026-10-30T14:00",
@@ -28,6 +24,10 @@
     {
      "hora": "2026-10-30T15:00",
      "probabilidad": 26
+    },
+    {
+     "hora": "2026-10-30T16:00",
+     "probabilidad": 34
     }
    ]
   },
@@ -36,20 +36,16 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-10-30T10:00",
-     "probabilidad": 73
-    },
-    {
      "hora": "2026-10-30T11:00",
-     "probabilidad": 61
+     "probabilidad": 55
     },
     {
      "hora": "2026-10-30T12:00",
-     "probabilidad": 26
+     "probabilidad": 22
     },
     {
      "hora": "2026-10-30T13:00",
-     "probabilidad": 27
+     "probabilidad": 23
     },
     {
      "hora": "2026-10-30T14:00",
@@ -58,6 +54,10 @@
     {
      "hora": "2026-10-30T15:00",
      "probabilidad": 26
+    },
+    {
+     "hora": "2026-10-30T16:00",
+     "probabilidad": 34
     }
    ]
   },
@@ -66,20 +66,16 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-10-30T10:00",
-     "probabilidad": 66
-    },
-    {
      "hora": "2026-10-30T11:00",
-     "probabilidad": 56
+     "probabilidad": 53
     },
     {
      "hora": "2026-10-30T12:00",
-     "probabilidad": 24
+     "probabilidad": 22
     },
     {
      "hora": "2026-10-30T13:00",
-     "probabilidad": 26
+     "probabilidad": 24
     },
     {
      "hora": "2026-10-30T14:00",
@@ -88,6 +84,10 @@
     {
      "hora": "2026-10-30T15:00",
      "probabilidad": 26
+    },
+    {
+     "hora": "2026-10-30T16:00",
+     "probabilidad": 34
     }
    ]
   }
