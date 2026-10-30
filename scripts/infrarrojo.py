@@ -186,16 +186,27 @@ def _inicio(clave):
     return dt.datetime.strptime(''.join(m.groups()), '%Y%j%H%M%S').replace(tzinfo=dt.timezone.utc)
 
 
-def imagenes_recientes(ahora):
-    """Imágenes del canal 13 de las últimas dos horas: {inicio redondeado a 10 min: clave}."""
-    claves = {}
+def imagenes_recientes(ahora, canales=('C13',)):
+    """Imágenes de las últimas dos horas: {canal: {inicio redondeado a 10 min: clave}}."""
+    claves = {c: {} for c in canales}
     for h in (ahora - dt.timedelta(hours=1), ahora):
         r = _pedir(BUCKET, params={'list-type': '2', 'prefix': f'ABI-L2-CMIPF/{h:%Y/%j/%H}/'})
         for c in re.findall(r'<Key>([^<]+)</Key>', r.text):
-            if 'C13_' in c:
+            canal = re.search(r'-M\dC(\d\d)_', c)
+            if canal and f'C{canal.group(1)}' in claves:
                 t = _inicio(c)
-                claves[t.replace(minute=t.minute // 10 * 10, second=0)] = c
+                claves[f'C{canal.group(1)}'][t.replace(minute=t.minute // 10 * 10, second=0)] = c
     return claves
+
+
+# Vapor de agua: temperatura media a menos de 60 km en los canales 8 (capas altas) y 10 (medias);
+# más fría es más húmeda. Igual que analisis/nubes_historial.py, con que se entrenó.
+CANALES_VAPOR = {'C08': 'vapor8_60', 'C10': 'vapor10_60'}
+
+
+def vapor(tb, distancia):
+    dentro = tb[distancia <= 60]
+    return None if np.isnan(dentro).mean() > 0.2 else round(float(np.nanmean(dentro)), 4)
 
 
 def leer_lugares(texto):
@@ -210,19 +221,36 @@ def leer_lugares(texto):
 
 def main():
     ahora = dt.datetime.now(dt.timezone.utc)
-    claves = imagenes_recientes(ahora)
+    todas = imagenes_recientes(ahora, ('C13', *CANALES_VAPOR))
+    claves = todas['C13']
     if not claves:
         raise SystemExit('No se encontraron imágenes infrarrojas recientes')
     ultima = max(claves)
     previa = claves.get(ultima - dt.timedelta(minutes=30))
     cajas = {t: leer_caja(BUCKET + c, _pedir) for t, c in ((ultima, claves[ultima]), (ultima - dt.timedelta(minutes=30), previa)) if c}
+    # Vapor de agua: la última imagen de cada canal, si es de la última hora. Si falla, el modelo
+    # usa el infrarrojo sin vapor.
+    cajas_vapor = {}
+    for canal, nombre in CANALES_VAPOR.items():
+        recientes = [t for t in todas[canal] if t >= ultima - dt.timedelta(hours=1)]
+        try:
+            if recientes:
+                cajas_vapor[nombre] = leer_caja(BUCKET + todas[canal][max(recientes)], _pedir)
+        except Exception as e:  # noqa: BLE001
+            print(f'Vapor de agua ({canal}) no disponible: {e}')
     # Como en el entrenamiento: en la hora T se usa la imagen que empezó a las T − 10 min.
     hasta = (ultima + dt.timedelta(minutes=10) - dt.timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M')
 
     def para(centro):
         res = {t: resumen(tb, distancias(plat, plon, centro)) for t, (tb, plat, plon) in cajas.items()}
         v = variables_modelo(res.get(ultima), res.get(ultima - dt.timedelta(minutes=30)))
-        return None if v is None else {'hasta': hasta, 'version': VERSION_IR, **v}
+        if v is None:
+            return None
+        for nombre, (tb, plat, plon) in cajas_vapor.items():
+            x = vapor(tb, distancias(plat, plon, centro))
+            if x is not None:
+                v[nombre] = x
+        return {'hasta': hasta, 'version': VERSION_IR, **v}
 
     modelo = para((LAT, LON))
     resultado = {'generado': ahora.strftime('%Y-%m-%dT%H:%M:%SZ'), 'imagen': hasta, 'modelo': modelo}

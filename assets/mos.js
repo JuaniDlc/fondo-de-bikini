@@ -28,6 +28,9 @@ export const VARIABLES_IR = [
   'ir_frio_100_area', 'ir_muy_frio_60_area', 'ir_centro', 'ir_crece_30', 'ir_crece_60',
 ];
 
+/** Vapor de agua (canales 8 y 10), que scripts/infrarrojo.py agrega al infrarrojo si lo pudo leer. */
+export const VARIABLES_VAPOR = ['vapor8_60', 'vapor10_60'];
+
 const esNumero = (v) => typeof v === 'number' && Number.isFinite(v);
 
 /** Valores de una columna en los índices [desde, hasta]; null si falta alguno. */
@@ -83,7 +86,7 @@ export function variablesMOS(hourly, i, { nino, aeropuerto, rayos, ir, fraccion 
   // Rayos de la última hora (scripts/rayos.py), con el mismo criterio que el aeropuerto.
   for (const nombre of VARIABLES_RAYOS) v[nombre] = rayos?.[nombre] ?? null;
   // Infrarrojo (nubes de tormenta) de la última imagen, igual que los rayos.
-  for (const nombre of VARIABLES_IR) v[nombre] = ir?.[nombre] ?? null;
+  for (const nombre of [...VARIABLES_IR, ...VARIABLES_VAPOR]) v[nombre] = ir?.[nombre] ?? null;
   // Qué tan recientes son: fracción de hora entre el resumen del aeropuerto y los rayos (0 a 5/6).
   v.fraccion = fraccion;
   for (const nombre of [...VARIABLES_RAYOS, ...VARIABLES_IR]) {
@@ -141,6 +144,8 @@ export const modeloPrevia = (adelanto) => (adelanto === 1 ? 'hora_con_metar' : `
 export const modeloRayos = (adelanto) => `hora_con_rayos_${adelanto}`;
 /** Igual, con los rayos y el infrarrojo (solo hasta 4 horas de anticipación). */
 export const modeloInfrarrojo = (adelanto) => `hora_con_ir_${adelanto}`;
+/** Igual, con el vapor de agua además del infrarrojo. */
+export const modeloVapor = (adelanto) => `hora_con_vapor_${adelanto}`;
 
 /**
  * Probabilidades del modelo corregido para la hora con índice i (la hora i acumula la lluvia
@@ -152,19 +157,23 @@ export function probabilidadesMOS(hourly, i, contexto = {}) {
   const v = variablesMOS(hourly, i, contexto);
   const adelanto = contexto.adelanto ?? 1;
   const intentar = (nombre) => (COEF[nombre] ? aplicarMOS(nombre, v) : null);
-  const horaIR = intentar(modeloInfrarrojo(adelanto));
+  const horaVapor = intentar(modeloVapor(adelanto));
+  const horaIR = horaVapor ?? intentar(modeloInfrarrojo(adelanto));
   const horaRayos = intentar(modeloRayos(adelanto));
   const horaMetar = intentar(modeloPrevia(adelanto));
-  const seisRayos = intentar('6h_con_rayos');
+  const seisVapor = intentar('6h_con_vapor');
+  const seisRayos = seisVapor ?? intentar('6h_con_rayos');
   const seisMetar = aplicarMOS('6h_con_metar', v);
   return {
     hora: horaIR ?? horaRayos ?? horaMetar ?? aplicarMOS('hora', v),
     horaUsaAeropuerto: (horaIR ?? horaRayos ?? horaMetar) !== null,
     horaUsaRayos: (horaIR ?? horaRayos) !== null,
     horaUsaIR: horaIR !== null,
+    horaUsaVapor: horaVapor !== null,
     proximas6h: seisRayos ?? seisMetar ?? aplicarMOS('6h', v),
     usaAeropuerto: (seisRayos ?? seisMetar) !== null,
     usaRayos: seisRayos !== null,
+    usaVapor: seisVapor !== null,
   };
 }
 

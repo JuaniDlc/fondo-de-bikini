@@ -13,9 +13,9 @@ test('el modelo corregido da en JavaScript lo mismo que en Python', () => {
     const i = c.hourly.time.indexOf(c.hora);
     // Los modelos de «la hora T» con k horas de anticipación usan el aeropuerto hasta T − k y los
     // rayos hasta T − k + c.minutos; los de 6 h, hasta T.
-    const v = variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto, rayos: c.rayos });
+    const v = variablesMOS(c.hourly, i, { nino: c.nino, aeropuerto: c.aeropuerto, rayos: c.rayos, ir: c.ir });
     for (const [nombre, esperado] of Object.entries(c.esperado)) {
-      const k = nombre === 'hora_con_metar' ? '1' : nombre.match(/^hora_con_(?:metar|rayos|ir)_(\d)$/)?.[1];
+      const k = nombre === 'hora_con_metar' ? '1' : nombre.match(/^hora_con_(?:metar|rayos|ir|vapor)_(\d)$/)?.[1];
       const vk = k ? variablesMOS(c.hourly, i, {
         nino: c.nino, aeropuerto: c.aeropuerto_previo[k], rayos: c.rayos_previo?.[k], ir: c.ir_previo?.[k],
         fraccion: c.minutos / 60,

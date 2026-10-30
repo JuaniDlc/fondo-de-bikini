@@ -154,6 +154,24 @@ def variables_infrarrojo(ir):
     return v
 
 
+VAPOR = ['vapor8_60', 'vapor10_60']  # los mismos de scripts/infrarrojo.py
+
+
+def vapor_cada_10min():
+    """Vapor de agua (analisis/datos/nubes/, de nubes_historial.py: una imagen por hora) cada
+    10 minutos: en el minuto t, la última imagen de la hora anterior, como en vivo."""
+    archivos = sorted((DATOS / 'nubes').glob('nubes-*.csv'))
+    if not archivos:
+        return None
+    n = pd.concat([pd.read_csv(a, usecols=['inicio'] + VAPOR) for a in archivos])
+    n['inicio'] = (pd.to_datetime(n['inicio'], utc=True).dt.tz_convert('America/Guayaquil')
+                   .dt.tz_localize(None).dt.floor('10min'))
+    n = n.drop_duplicates('inicio').set_index('inicio').sort_index()
+    n = n.reindex(pd.date_range(n.index.min(), n.index.max(), freq='10min'))
+    n.index = n.index + pd.Timedelta(minutes=10)
+    return n[VAPOR].ffill(limit=6)
+
+
 def comprobar_infrarrojo(ir, v):
     """scripts/infrarrojo.py (en vivo) debe calcular lo mismo que variables_infrarrojo."""
     import sys
@@ -322,6 +340,10 @@ def cargar() -> pd.DataFrame:
         comprobar_infrarrojo(imagenes, v)
         CADA_10MIN['ir'] = v
         df = df.join(v)  # en la hora T: imagen de T − 10 min y de T − 40 min
+    vapor = vapor_cada_10min()
+    if vapor is not None:
+        CADA_10MIN['vapor'] = vapor
+        df = df.join(vapor)
 
     pres = p['pressure_msl_gfs_seamless']
     df['heuristica'] = heuristica(pres, pres.shift(3), p['temperature_2m_gfs_seamless'],
@@ -382,7 +404,7 @@ def entrenar(objetivo, df, extra=()):
     y = f'y_{objetivo}'
     # Todas las variantes de un objetivo usan las mismas horas: las que tienen reporte del aeropuerto
     # (y datos de rayos, si están descargados).
-    requeridas = METAR[objetivo] + [c for c in RAYOS + (IR if objetivo == 'hora' else []) if c in df]
+    requeridas = METAR[objetivo] + [c for c in RAYOS + (IR if objetivo == 'hora' else []) + VAPOR if c in df]
     datos = df.dropna(subset=cols + requeridas + [y, f'crudo_{objetivo}'])
     tr, te = datos[datos.index < CORTE], datos[datos.index >= CORTE]
     log = logistica(tr, cols, y, CORTE)
@@ -394,6 +416,7 @@ def entrenar(objetivo, df, extra=()):
 CON_METAR = 'MOS logística + lluvia en el aeropuerto (METAR)'
 CON_RAYOS = 'MOS logística + aeropuerto + rayos del satélite'
 CON_IR = 'MOS logística + aeropuerto + rayos + infrarrojo'
+CON_VAPOR = 'MOS logística + aeropuerto + rayos + infrarrojo + vapor de agua'
 
 
 def climatologia(tr, te, y):
@@ -444,6 +467,12 @@ def main():
             cols_i, _, te_i, log_i, _ = entrenar(objetivo, base, extra=METAR[objetivo] + RAYOS + IR)
             assert te_i.index.equals(te.index)
             candidatos[CON_IR] = log_i.predict_proba(te_i[cols_i])[:, 1]
+        if 'vapor8_60' in df:
+            # «6 h» no usa el infrarrojo: rayos + vapor (como 6h_con_vapor)
+            extra = METAR[objetivo] + RAYOS + (IR if objetivo == 'hora' else []) + VAPOR
+            cols_v, _, te_v, log_v, _ = entrenar(objetivo, base, extra=extra)
+            assert te_v.index.equals(te.index)
+            candidatos[CON_VAPOR] = log_v.predict_proba(te_v[cols_v])[:, 1]
 
         informe += [f'## {titulo}', '',
                     f'Horas de prueba: {len(te):,}. Llovió en el {pct(yt.mean())} de ellas '
@@ -454,13 +483,13 @@ def main():
             m = metricas(yt, p, brier_clim)
             informe.append(f"| {nombre} | {m['brier']:.3f} | {m['mejora'] * 100:+.0f} % | {m['auc']:.2f} |")
 
-        mejor = next(c for c in (CON_IR, CON_RAYOS, CON_METAR) if c in candidatos)  # el que usa la página
+        mejor = next(c for c in (CON_VAPOR, CON_IR, CON_RAYOS, CON_METAR) if c in candidatos)  # el que usa la página
         p = candidatos[mejor]
         informe += ['', f'**Calibración de «{mejor}»** (cuando dice X %, ¿cuánto llovió?):', '',
                     '| Pronóstico | Horas | Promedio pronosticado | Llovió de verdad |', '|---|---|---|---|']
         informe += [f"| {f['rango']} | {f['horas']:,} | {pct(f['pronostico'])} | {pct(f['llovio'])} |"
                     for f in tabla_calibracion(yt, p)]
-        for nombre in ('MOS: regresión logística', CON_METAR, CON_RAYOS, CON_IR):
+        for nombre in ('MOS: regresión logística', CON_METAR, CON_RAYOS, CON_IR, CON_VAPOR):
             if nombre not in candidatos:
                 continue
             informe += ['', f'**Si se usara como alerta** («{nombre}»):', '',
@@ -522,14 +551,14 @@ def previas(df, k, minutos=0):
     d['lluvia_previa'] = d['y_hora'].shift(k)
     d['lluvia_previa_3h'] = d['y_hora'].shift(k).rolling(3, min_periods=3).max()
     t = d.index - pd.Timedelta(hours=k) + pd.Timedelta(minutes=minutos)
-    for nombre, cols in (('rayos', RAYOS), ('ir', IR)):
+    for nombre, cols in (('rayos', RAYOS), ('ir', IR), ('vapor', VAPOR)):
         if nombre in CADA_10MIN:
             d[cols] = CADA_10MIN[nombre].reindex(t)[cols].to_numpy()
     d['fraccion'] = minutos / 60
     for c in RAYOS + IR:
         if c in d:
             d[f'{c}_x_fr'] = d[c] * d['fraccion']
-    return d
+    return d.copy()  # sin fragmentar, para apilar y entrenar más rápido
 
 
 MINUTOS = range(0, 60, 10)
@@ -604,8 +633,13 @@ def exportar_produccion(df, p):
     ajustar('6h_con_metar', df, VARIABLES['6h'] + PERSISTENCIA, 'y_6h')
     con_rayos = 'rayos_150_1h' in df
     con_ir = con_rayos and 'ir_frio_30' in df
+    # El vapor de agua llega con el infrarrojo (scripts/infrarrojo.py); si falta, se usan los
+    # modelos sin él (analisis/satelite.md).
+    con_vapor = con_ir and 'vapor8_60' in df
     if con_rayos:
         ajustar('6h_con_rayos', df, VARIABLES['6h'] + PERSISTENCIA + RAYOS, 'y_6h')
+    if con_vapor:
+        ajustar('6h_con_vapor', df, VARIABLES['6h'] + PERSISTENCIA + RAYOS + VAPOR, 'y_6h')
     # «La hora T» con la lluvia del aeropuerto (y los rayos) de k horas antes: un modelo por
     # anticipación, porque el efecto de «está lloviendo» se va perdiendo con las horas.
     # Los de rayos e infrarrojo, con los datos de cada minuto de la hora (MINUTOS) apilados.
@@ -616,6 +650,9 @@ def exportar_produccion(df, p):
             ajustar(f'hora_con_rayos_{k}', pila, VARIABLES['hora'] + PREVIA + RAYOS + FRACCION_RAYOS, 'y_hora', k)
         if con_ir and k in ADELANTOS_IR:
             ajustar(f'hora_con_ir_{k}', pila, VARIABLES['hora'] + PREVIA + RAYOS + IR + FRACCION_IR, 'y_hora', k)
+        if con_vapor and k in ADELANTOS_IR:
+            ajustar(f'hora_con_vapor_{k}', pila, VARIABLES['hora'] + PREVIA + RAYOS + IR + VAPOR + FRACCION_IR,
+                    'y_hora', k)
 
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
@@ -670,9 +707,12 @@ def exportar_produccion(df, p):
             **({'rayos': {c: float(df.loc[t, c]) for c in RAYOS},
                 'rayos_previo': {str(k): {c: float(previa[k][c].iloc[0]) for c in RAYOS} for k in ADELANTOS}}
                if con_rayos else {}),
-            # Infrarrojo de la imagen antes de T − k + minutos (la hora T, k = 1 … 4)
-            **({'ir_previo': {str(k): {c: float(previa[k][c].iloc[0]) for c in IR} for k in ADELANTOS_IR}}
+            # Infrarrojo (y vapor) de la imagen antes de T − k + minutos (la hora T, k = 1 … 4); el
+            # vapor de la hora antes de T va con el infrarrojo de T (6 h)
+            **({'ir_previo': {str(k): {c: float(previa[k][c].iloc[0]) for c in IR + (VAPOR if con_vapor else [])}
+                              for k in ADELANTOS_IR}}
                if con_ir else {}),
+            **({'ir': {c: float(df.loc[t, c]) for c in IR + VAPOR}} if con_vapor else {}),
             'esperado': esperado,
         })
     destino = raiz / 'tests' / 'fixtures'
