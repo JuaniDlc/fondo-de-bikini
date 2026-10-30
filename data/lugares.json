@@ -1,5 +1,5 @@
 {
- "generado": "2026-10-30T15:30:38.478Z",
+ "generado": "2026-10-30T15:50:26.281Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,23 +7,23 @@
    "horas": [
     {
      "hora": "2026-10-30T11:00",
-     "probabilidad": 20
+     "probabilidad": 15
     },
     {
      "hora": "2026-10-30T12:00",
-     "probabilidad": 10
+     "probabilidad": 9
     },
     {
      "hora": "2026-10-30T13:00",
-     "probabilidad": 19
+     "probabilidad": 16
     },
     {
      "hora": "2026-10-30T14:00",
-     "probabilidad": 17
+     "probabilidad": 15
     },
     {
      "hora": "2026-10-30T15:00",
-     "probabilidad": 26
+     "probabilidad": 25
     },
     {
      "hora": "2026-10-30T16:00",
@@ -37,41 +37,11 @@
    "horas": [
     {
      "hora": "2026-10-30T11:00",
-     "probabilidad": 18
-    },
-    {
-     "hora": "2026-10-30T12:00",
-     "probabilidad": 10
-    },
-    {
-     "hora": "2026-10-30T13:00",
-     "probabilidad": 18
-    },
-    {
-     "hora": "2026-10-30T14:00",
-     "probabilidad": 17
-    },
-    {
-     "hora": "2026-10-30T15:00",
-     "probabilidad": 26
-    },
-    {
-     "hora": "2026-10-30T16:00",
-     "probabilidad": 36
-    }
-   ]
-  },
-  {
-   "nombre": "Lugar B",
-   "usaRayos": true,
-   "horas": [
-    {
-     "hora": "2026-10-30T11:00",
      "probabilidad": 16
     },
     {
      "hora": "2026-10-30T12:00",
-     "probabilidad": 9
+     "probabilidad": 10
     },
     {
      "hora": "2026-10-30T13:00",
@@ -87,7 +57,37 @@
     },
     {
      "hora": "2026-10-30T16:00",
-     "probabilidad": 35
+     "probabilidad": 36
+    }
+   ]
+  },
+  {
+   "nombre": "Lugar B",
+   "usaRayos": true,
+   "horas": [
+    {
+     "hora": "2026-10-30T11:00",
+     "probabilidad": 14
+    },
+    {
+     "hora": "2026-10-30T12:00",
+     "probabilidad": 8
+    },
+    {
+     "hora": "2026-10-30T13:00",
+     "probabilidad": 15
+    },
+    {
+     "hora": "2026-10-30T14:00",
+     "probabilidad": 15
+    },
+    {
+     "hora": "2026-10-30T15:00",
+     "probabilidad": 25
+    },
+    {
+     "hora": "2026-10-30T16:00",
+     "probabilidad": 36
     }
    ]
   }
