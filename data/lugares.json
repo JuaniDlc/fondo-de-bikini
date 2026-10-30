@@ -1,33 +1,33 @@
 {
- "generado": "2026-10-30T00:50:29.001Z",
+ "generado": "2026-10-30T01:00:26.489Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-10-29T20:00",
-     "probabilidad": 98
-    },
-    {
      "hora": "2026-10-29T21:00",
-     "probabilidad": 91
+     "probabilidad": 94
     },
     {
      "hora": "2026-10-29T22:00",
-     "probabilidad": 79
+     "probabilidad": 77
     },
     {
      "hora": "2026-10-29T23:00",
-     "probabilidad": 71
+     "probabilidad": 70
     },
     {
      "hora": "2026-10-30T00:00",
-     "probabilidad": 50
+     "probabilidad": 57
     },
     {
      "hora": "2026-10-30T01:00",
-     "probabilidad": 38
+     "probabilidad": 36
+    },
+    {
+     "hora": "2026-10-30T02:00",
+     "probabilidad": 25
     }
    ]
   },
@@ -36,12 +36,8 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-10-29T20:00",
-     "probabilidad": 98
-    },
-    {
      "hora": "2026-10-29T21:00",
-     "probabilidad": 90
+     "probabilidad": 94
     },
     {
      "hora": "2026-10-29T22:00",
@@ -53,11 +49,15 @@
     },
     {
      "hora": "2026-10-30T00:00",
-     "probabilidad": 49
+     "probabilidad": 58
     },
     {
      "hora": "2026-10-30T01:00",
      "probabilidad": 37
+    },
+    {
+     "hora": "2026-10-30T02:00",
+     "probabilidad": 26
     }
    ]
   },
@@ -66,28 +66,28 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-10-29T20:00",
-     "probabilidad": 98
-    },
-    {
      "hora": "2026-10-29T21:00",
-     "probabilidad": 93
+     "probabilidad": 97
     },
     {
      "hora": "2026-10-29T22:00",
-     "probabilidad": 82
+     "probabilidad": 86
     },
     {
      "hora": "2026-10-29T23:00",
-     "probabilidad": 75
+     "probabilidad": 77
     },
     {
      "hora": "2026-10-30T00:00",
-     "probabilidad": 53
+     "probabilidad": 60
     },
     {
      "hora": "2026-10-30T01:00",
-     "probabilidad": 41
+     "probabilidad": 43
+    },
+    {
+     "hora": "2026-10-30T02:00",
+     "probabilidad": 31
     }
    ]
   }
