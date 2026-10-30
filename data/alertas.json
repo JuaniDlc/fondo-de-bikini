@@ -4,9 +4,9 @@
     "enviado": "2026-10-30T02:40:24.218Z"
   },
   "rayos": {
-    "nivel": 0,
-    "enviado": "2026-10-30T00:50:29.678Z",
-    "avisada": false,
-    "ultimoRayo": "2026-10-30T00:50:19Z"
+    "nivel": 2,
+    "enviado": "2026-10-30T07:10:19.653Z",
+    "avisada": true,
+    "ultimoRayo": "2026-10-30T07:10:13Z"
   }
 }
