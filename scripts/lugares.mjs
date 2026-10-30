@@ -25,7 +25,9 @@ const aeropuerto = (await leerJSON(new URL('aeropuerto.json', carpeta)))
 const respuesta = await consultarOpenMeteo();
 
 const lugares = Object.entries(rayos).map(([nombre, r]) => {
-  const { actual, proyeccion } = procesarRespuesta(respuesta, { nino, aeropuerto, rayos: r, ir: ir[nombre] ?? null });
+  const { actual, proyeccion } = procesarRespuesta(respuesta, {
+    nino, aeropuerto, rayos: r, ir: ir[nombre] ?? null, enAeropuerto: nombre === 'Aeropuerto',
+  });
   const horas = [{ hora: actual.horaLluvia, probabilidad: actual.probabilidad }, ...proyeccion].slice(0, HORAS);
   return {
     nombre,

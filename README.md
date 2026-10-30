@@ -67,6 +67,8 @@ Los secretos se guardan en **Settings → Secrets and variables → Actions → 
 
 Además del aeropuerto, la página puede mostrar la tabla «Por lugar» para otros puntos de la ciudad, con los rayos contados desde cada uno (`scripts/rayos.py` y `scripts/lugares.mjs`, en el workflow «Rayos»). Las coordenadas van solo en el secreto `LUGARES`, con el formato `Lugar A:<latitud>,<longitud>;Lugar B:<latitud>,<longitud>`. El repositorio y la página son públicos, así que nunca se escriben coordenadas ni distancias de los lugares: `data/lugares.json` solo lleva nombres y porcentajes, y los registros del workflow solo los nombres.
 
+Cuando el aeropuerto ya reporta lluvia en la hora en curso, solo el aeropuerto la muestra como observada (100 %). En los demás lugares esa lluvia entra al modelo como lluvia de la hora anterior, y la probabilidad la deciden los rayos y el infrarrojo medidos desde cada lugar: que llueva en el aeropuerto no quiere decir que ya llueva a unos kilómetros.
+
 ## En local
 
 Necesitas Node 20 o superior.
@@ -123,6 +125,14 @@ gh run download <id de la corrida> -D analisis/datos/rayos
 node --test
 ```
 
-`entrenar.py` reescribe `analisis/resultados.md`, `assets/mos-coeficientes.js` y los casos de `tests/fixtures/mos-casos.json`. Las pruebas comprueban que JavaScript calcula exactamente lo mismo que Python.
+`entrenar.py` reescribe `analisis/resultados.md`, `assets/mos-coeficientes.js` y los casos de `tests/fixtures/mos-casos.json`. Cada regresión da más peso a lo reciente (cada hora vale la mitad por cada dos años de antigüedad) y las de 6 horas se recalibran (Platt) con predicciones fuera de muestra desde 2024, entrenando cada trimestre solo con lo anterior; la recalibración va ya aplicada en los coeficientes. Los modelos de rayos e infrarrojo se entrenan con los datos de cada minuto de la hora (0, 10 … 50 minutos después del reporte horario del aeropuerto), igual que llegan en vivo cada 10 minutos; la página sigue mostrando la probabilidad por hora.
+
+Para comparar formas de entrenar (una vez o cada mes, peso a lo reciente, gradient boosting monótono, recalibración, modelo por minuto) con predicciones mes a mes:
+
+```bash
+.venv/Scripts/python analisis/validacion.py
+```
+
+Escribe [analisis/validacion.md](analisis/validacion.md). Las pruebas comprueban que JavaScript calcula exactamente lo mismo que Python.
 
 No es un pronóstico oficial. Datos del clima: [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0).

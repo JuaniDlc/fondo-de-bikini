@@ -61,7 +61,7 @@ export function ninoVigente(nino, local) {
  * Variables de entrada para la hora con índice i de la respuesta horaria multimodelo.
  * Una variable vale null si faltan datos para calcularla.
  */
-export function variablesMOS(hourly, i, { nino, aeropuerto, rayos, ir } = {}) {
+export function variablesMOS(hourly, i, { nino, aeropuerto, rayos, ir, fraccion = 0 } = {}) {
   const local = hourly.time[i];
   const hora = Number(local.slice(11, 13));
   const dia = diaDelAno(local);
@@ -84,6 +84,11 @@ export function variablesMOS(hourly, i, { nino, aeropuerto, rayos, ir } = {}) {
   for (const nombre of VARIABLES_RAYOS) v[nombre] = rayos?.[nombre] ?? null;
   // Infrarrojo (nubes de tormenta) de la última imagen, igual que los rayos.
   for (const nombre of VARIABLES_IR) v[nombre] = ir?.[nombre] ?? null;
+  // Qué tan recientes son: fracción de hora entre el resumen del aeropuerto y los rayos (0 a 5/6).
+  v.fraccion = fraccion;
+  for (const nombre of [...VARIABLES_RAYOS, ...VARIABLES_IR]) {
+    v[`${nombre}_x_fr`] = v[nombre] === null ? null : v[nombre] * fraccion;
+  }
   const llueve2h = [];
   for (const [corto, modelo] of Object.entries(MODELOS_MOS)) {
     const col = `precipitation_${modelo}`;

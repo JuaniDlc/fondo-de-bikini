@@ -139,8 +139,9 @@ def imagenes_infrarrojo():
 
 
 def variables_infrarrojo(ir):
-    """Variables del infrarrojo: en la hora T, la imagen que empezó a las T − 10 min y la de 30 min
-    antes. La misma cuenta hace scripts/infrarrojo.py en vivo (comprobar_infrarrojo lo verifica)."""
+    """Variables del infrarrojo cada 10 minutos: en el minuto t, la imagen que empezó a las t − 10 min
+    y la de 30 min antes. La misma cuenta hace scripts/infrarrojo.py en vivo (comprobar_infrarrojo
+    lo verifica)."""
     v = pd.DataFrame(index=ir.index)
     for km in RADIOS_IR:
         v[f'ir_frio_{km}'] = np.clip(270 - ir[f'tbmin_{km}'], 0, None)  # cuánto más fría que 270 K
@@ -150,7 +151,7 @@ def variables_infrarrojo(ir):
     for km in (30, 60):
         v[f'ir_crece_{km}'] = (ir[f'tbmin_{km}'].shift(3) - ir[f'tbmin_{km}']).clip(-30, 30)
     v.index = v.index + pd.Timedelta(minutes=10)
-    return v[v.index.minute == 0]
+    return v
 
 
 def comprobar_infrarrojo(ir, v):
@@ -159,6 +160,7 @@ def comprobar_infrarrojo(ir, v):
     sys.path.insert(0, str(AQUI.parent / 'scripts'))
     from infrarrojo import variables_modelo
     resumen = lambda t: None if t not in ir.index or ir.loc[t].isna().any() else ir.loc[t].to_dict()  # noqa: E731
+    v = v[v.index.minute == 0]
     frias = v.index[v['ir_frio_30'].fillna(0) > 20]
     for t in list(frias[:: max(1, len(frias) // 20)]) + list(v.index[[100, 5000]]):
         vivo = variables_modelo(resumen(t - pd.Timedelta(minutes=10)), resumen(t - pd.Timedelta(minutes=40)))
@@ -186,14 +188,13 @@ def bloques_rayos(carpeta=DATOS / 'rayos'):
     return b
 
 
-def rayos_por_hora():
-    """Variables de rayos por hora: en la hora T, los rayos de T − 60 min a T."""
+def rayos_cada_10min():
+    """Variables de rayos cada 10 minutos: en el minuto t, los rayos de t − 60 min a t."""
     b = bloques_rayos()
     if b is None:
         return None
     v = variables_rayos(b)
-    v = v[v.index.minute == 0]
-    comprobar_rayos(b, v)
+    comprobar_rayos(b, v[v.index.minute == 0])
     return v
 
 
@@ -230,6 +231,10 @@ def comprobar_rayos(b, v):
             continue
         for c in RAYOS:
             assert abs(vivo[c] - esperado[c]) < 1e-5, (t, c, vivo[c], esperado[c])
+
+
+# Rayos e infrarrojo cada 10 minutos (los llena cargar), para los modelos según el minuto de la hora.
+CADA_10MIN = {}
 
 
 def cargar() -> pd.DataFrame:
@@ -307,13 +312,15 @@ def cargar() -> pd.DataFrame:
     df['lluvia_previa'] = df['y_hora'].shift(1)
     df['lluvia_previa_3h'] = df['y_hora'].shift(1).rolling(3, min_periods=3).max()
 
-    r = rayos_por_hora()
+    r = rayos_cada_10min()
     if r is not None:
+        CADA_10MIN['rayos'] = r
         df = df.join(r)  # en la hora T: rayos de T − 60 min a T
     imagenes = imagenes_infrarrojo()
     if imagenes is not None:
         v = variables_infrarrojo(imagenes)
         comprobar_infrarrojo(imagenes, v)
+        CADA_10MIN['ir'] = v
         df = df.join(v)  # en la hora T: imagen de T − 10 min y de T − 40 min
 
     pres = p['pressure_msl_gfs_seamless']
@@ -378,7 +385,7 @@ def entrenar(objetivo, df, extra=()):
     requeridas = METAR[objetivo] + [c for c in RAYOS + (IR if objetivo == 'hora' else []) if c in df]
     datos = df.dropna(subset=cols + requeridas + [y, f'crudo_{objetivo}'])
     tr, te = datos[datos.index < CORTE], datos[datos.index >= CORTE]
-    log = make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000)).fit(tr[cols], tr[y])
+    log = logistica(tr, cols, y, CORTE)
     gb = HistGradientBoostingClassifier(max_iter=300, learning_rate=0.05, max_leaf_nodes=15,
                                         l2_regularization=1.0, random_state=0).fit(tr[cols], tr[y])
     return cols, tr, te, log, gb
@@ -404,7 +411,10 @@ def main():
     informe = ['# Fase B: ¿qué tan certeros son los pronósticos de lluvia para Guayaquil?', '',
                f'Verdad: lluvia o llovizna reportada en el aeropuerto (SEGU). Entrenamiento: '
                f'{df.index[0]:%Y-%m-%d} a {CORTE - pd.Timedelta(days=1):%Y-%m-%d}. Prueba (datos que el '
-               f'modelo no vio): {CORTE:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}.', '']
+               f'modelo no vio): {CORTE:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}. Las regresiones logísticas dan más '
+               f'peso a lo reciente (media vida de {MEDIA_VIDA_DIAS} días). La página usa además la recalibración '
+               'y los modelos según el minuto de la hora, que se validan mes a mes en '
+               '[validacion.md](validacion.md).', '']
 
     for objetivo, titulo in (('hora', '¿Llueve en esta hora?'), ('6h', '¿Llueve en las próximas 6 horas?')):
         y = f'y_{objetivo}'
@@ -504,15 +514,70 @@ def nombre_previa(k):
     return 'hora_con_metar' if k == 1 else f'hora_con_metar_{k}'
 
 
-def previas(df, k):
-    """Para «la hora T» con k horas de anticipación: el aeropuerto y los rayos hasta T − k."""
+def previas(df, k, minutos=0):
+    """Para «la hora T» con k horas de anticipación: el aeropuerto hasta T − k y los rayos y el
+    infrarrojo hasta T − k + minutos (el workflow los mide cada 10 minutos, así que en vivo casi
+    siempre son de unos minutos después de T − k)."""
     d = df.copy()
     d['lluvia_previa'] = d['y_hora'].shift(k)
     d['lluvia_previa_3h'] = d['y_hora'].shift(k).rolling(3, min_periods=3).max()
+    t = d.index - pd.Timedelta(hours=k) + pd.Timedelta(minutes=minutos)
+    for nombre, cols in (('rayos', RAYOS), ('ir', IR)):
+        if nombre in CADA_10MIN:
+            d[cols] = CADA_10MIN[nombre].reindex(t)[cols].to_numpy()
+    d['fraccion'] = minutos / 60
     for c in RAYOS + IR:
         if c in d:
-            d[c] = df[c].shift(k)
+            d[f'{c}_x_fr'] = d[c] * d['fraccion']
     return d
+
+
+MINUTOS = range(0, 60, 10)
+# Según el minuto de la hora: la fracción de la hora que ya pasó y cuánto pesan los rayos y el
+# infrarrojo según qué tan recientes son (con datos de T − k + 50 min se acierta más que con T − k).
+FRACCION_RAYOS = ['fraccion'] + [f'{c}_x_fr' for c in RAYOS]
+FRACCION_IR = FRACCION_RAYOS + [f'{c}_x_fr' for c in IR]
+
+
+def apilar(df, k):
+    """previas(df, k, m) para cada minuto m de MINUTOS, una debajo de otra."""
+    return pd.concat([previas(df, k, m) for m in MINUTOS])
+
+
+# Cada hora pesa la mitad por cada MEDIA_VIDA_DIAS de antigüedad: el clima de Guayaquil cambia de un
+# año a otro (El Niño) y lo reciente se parece más a lo que viene (analisis/validacion.md).
+MEDIA_VIDA_DIAS = 730
+CALIBRA_DESDE = pd.Timestamp('2024-01-01')  # predicciones fuera de muestra para recalibrar
+
+
+def pesos(indice, hasta):
+    return 0.5 ** ((hasta - indice) / pd.Timedelta(days=MEDIA_VIDA_DIAS)).to_numpy()
+
+
+def logistica(datos, cols, y, hasta=None):
+    """Regresión logística con más peso en lo reciente (hasta: la fecha que pesa 1)."""
+    hasta = datos.index.max() if hasta is None else hasta
+    return make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000)).fit(
+        datos[cols], datos[y], logisticregression__sample_weight=pesos(datos.index, hasta))
+
+
+def fuera_de_muestra(datos, cols, y, desde, freq='QS'):
+    """z (logit) de cada fila desde «desde», con un modelo entrenado solo con lo anterior a su periodo."""
+    z, ys, indice = [], [], []
+    for inicio in pd.date_range(desde, datos.index.max(), freq=freq):
+        fin = inicio + pd.tseries.frequencies.to_offset(freq)
+        te = datos[(datos.index >= inicio) & (datos.index < fin)]
+        if len(te):
+            z.append(logistica(datos[datos.index < inicio], cols, y, inicio).decision_function(te[cols]))
+            ys.append(te[y].to_numpy())
+            indice.append(te.index)
+    return np.concatenate(z), np.concatenate(ys), np.concatenate(indice)
+
+
+def platt(z, y):
+    """Recalibración p = σ(a·z + b): corrige que el modelo exagere o se quede corto."""
+    cal = LogisticRegression(C=100).fit(z[:, None], y)
+    return float(cal.coef_[0][0]), float(cal.intercept_[0])
 
 
 def exportar_produccion(df, p):
@@ -522,11 +587,17 @@ def exportar_produccion(df, p):
       para comprobar que JavaScript calcula exactamente lo mismo."""
     raiz = AQUI.parent
     modelos, filas = {}, {}
-    def ajustar(nombre, datos, cols, y):
+    def ajustar(nombre, datos, cols, y, k=None):
+        """k: anticipación de un modelo apilado por minuto (sus casos de prueba usan previas).
+        Los de 6 h se recalibran en los coeficientes: a·(intercepto + Σ coef·x) + b. Los de la
+        hora no: ya estaban calibrados y recalibrarlos no mejora (analisis/validacion.md)."""
         datos = datos.dropna(subset=cols + [y])
-        pipe = make_pipeline(StandardScaler(), LogisticRegression(C=0.5, max_iter=2000)).fit(datos[cols], datos[y])
-        modelos[nombre] = exportar(pipe, cols)
-        filas[nombre] = (datos, pipe, cols)
+        pipe = logistica(datos, cols, y)
+        a, b = platt(*fuera_de_muestra(datos, cols, y, CALIBRA_DESDE)[:2]) if y == 'y_6h' else (1.0, 0.0)
+        modelos[nombre] = exportar(pipe, cols, a, b)
+        filas[nombre] = (datos[datos['fraccion'] == 0] if k else datos, pipe, cols, k, a, b)
+        if y == 'y_6h':
+            print(f'{nombre}: recalibración a = {a:.3f}, b = {b:+.3f}', flush=True)
 
     ajustar('hora', df, VARIABLES['hora'], 'y_hora')
     ajustar('6h', df, VARIABLES['6h'], 'y_6h')
@@ -537,13 +608,14 @@ def exportar_produccion(df, p):
         ajustar('6h_con_rayos', df, VARIABLES['6h'] + PERSISTENCIA + RAYOS, 'y_6h')
     # «La hora T» con la lluvia del aeropuerto (y los rayos) de k horas antes: un modelo por
     # anticipación, porque el efecto de «está lloviendo» se va perdiendo con las horas.
+    # Los de rayos e infrarrojo, con los datos de cada minuto de la hora (MINUTOS) apilados.
     for k in ADELANTOS:
-        d = previas(df, k)
-        ajustar(nombre_previa(k), d, VARIABLES['hora'] + PREVIA, 'y_hora')
+        ajustar(nombre_previa(k), previas(df, k), VARIABLES['hora'] + PREVIA, 'y_hora')
+        pila = apilar(df, k) if con_rayos else None
         if con_rayos:
-            ajustar(f'hora_con_rayos_{k}', d, VARIABLES['hora'] + PREVIA + RAYOS, 'y_hora')
+            ajustar(f'hora_con_rayos_{k}', pila, VARIABLES['hora'] + PREVIA + RAYOS + FRACCION_RAYOS, 'y_hora', k)
         if con_ir and k in ADELANTOS_IR:
-            ajustar(f'hora_con_ir_{k}', d, VARIABLES['hora'] + PREVIA + RAYOS + IR, 'y_hora')
+            ajustar(f'hora_con_ir_{k}', pila, VARIABLES['hora'] + PREVIA + RAYOS + IR + FRACCION_IR, 'y_hora', k)
 
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
@@ -556,23 +628,30 @@ def exportar_produccion(df, p):
         encoding='utf-8')
 
     # Casos de prueba: horas variadas donde los cuatro modelos se pueden calcular.
-    datos6, _, _ = filas['6h_con_metar']
+    datos6 = filas['6h_con_metar'][0]
     comunes = datos6.index.intersection(filas['hora'][0].index)
-    for nombre, (datos, _, _) in filas.items():
+    for datos, *_ in filas.values():
         comunes = comunes.intersection(datos.index)
     elegidas = list(pd.Series(comunes).sample(5, random_state=7))
     elegidas.append(datos6.loc[comunes, 'lluvia_ahora'].idxmax())  # una con lluvia en el aeropuerto
     if con_rayos:
         elegidas.append(datos6.loc[comunes, 'cercania_20m'].idxmax())  # una con rayos encima
     casos = []
-    for t in elegidas:
+    for n, t in enumerate(elegidas):
+        # Cada caso con los rayos y el infrarrojo de otro minuto de la hora (0 a 50), si los hay.
+        minutos = MINUTOS[n % len(MINUTOS)]
+        previa = {k: previas(df, k, minutos).loc[[t]] for k in ADELANTOS}
+        if any(previa[k][cols].isna().any(axis=None) for _, _, cols, k, *_ in filas.values() if k):
+            minutos = 0
+            previa = {k: previas(df, k).loc[[t]] for k in ADELANTOS}
         ventana = p.loc[t - pd.Timedelta(hours=4): t + pd.Timedelta(hours=VENTANA + 1)]
         hourly = {'time': [x.strftime('%Y-%m-%dT%H:%M') for x in ventana.index]}
         for clave, col in COLUMNAS_FIXTURE.items():
             hourly[clave] = [None if pd.isna(v) else float(v) for v in ventana[col]]
         esperado = {}
-        for nombre, (datos, pipe, cols) in filas.items():
-            esperado[nombre] = float(pipe.predict_proba(datos.loc[[t], cols])[:, 1][0])
+        for nombre, (datos, pipe, cols, k, a, b) in filas.items():
+            fila = previa[k] if k else datos.loc[[t]]
+            esperado[nombre] = float(1 / (1 + np.exp(-(a * pipe.decision_function(fila[cols])[0] + b))))
         casos.append({
             'hora': t.strftime('%Y-%m-%dT%H:%M'),
             'hourly': hourly,
@@ -586,12 +665,13 @@ def exportar_produccion(df, p):
                 str(k): {'lluvia_ahora': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa']),
                          'lluvia_3h': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa_3h'])}
                 for k in ADELANTOS},
-            # Rayos de la hora antes de T (6 h) y de la hora antes de T − k (la hora T)
+            # Rayos de la hora antes de T (6 h) y de la hora antes de T − k + minutos (la hora T)
+            'minutos': minutos,
             **({'rayos': {c: float(df.loc[t, c]) for c in RAYOS},
-                'rayos_previo': {str(k): {c: float(previas(df, k).loc[t, c]) for c in RAYOS} for k in ADELANTOS}}
+                'rayos_previo': {str(k): {c: float(previa[k][c].iloc[0]) for c in RAYOS} for k in ADELANTOS}}
                if con_rayos else {}),
-            # Infrarrojo de la hora antes de T − k (la hora T, k = 1 … 4)
-            **({'ir_previo': {str(k): {c: float(previas(df, k).loc[t, c]) for c in IR} for k in ADELANTOS_IR}}
+            # Infrarrojo de la imagen antes de T − k + minutos (la hora T, k = 1 … 4)
+            **({'ir_previo': {str(k): {c: float(previa[k][c].iloc[0]) for c in IR} for k in ADELANTOS_IR}}
                if con_ir else {}),
             'esperado': esperado,
         })
@@ -602,14 +682,15 @@ def exportar_produccion(df, p):
           f'{len(casos)} casos de prueba en tests/fixtures/mos-casos.json')
 
 
-def exportar(pipe, cols):
+def exportar(pipe, cols, a=1.0, b=0.0):
+    """Coeficientes con la recalibración σ(a·z + b) ya aplicada, así JavaScript no cambia."""
     esc, lr = pipe.named_steps['standardscaler'], pipe.named_steps['logisticregression']
     return {
         'variables': cols,
         'media': [round(float(x), 6) for x in esc.mean_],
         'escala': [round(float(x), 6) for x in esc.scale_],
-        'coeficientes': [round(float(x), 6) for x in lr.coef_[0]],
-        'intercepto': round(float(lr.intercept_[0]), 6),
+        'coeficientes': [round(float(a * x), 6) for x in lr.coef_[0]],
+        'intercepto': round(float(a * lr.intercept_[0] + b), 6),
     }
 
 

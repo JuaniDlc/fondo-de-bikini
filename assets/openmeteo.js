@@ -216,10 +216,13 @@ function fila(hora, T, HR, P, P3, series, modelos, contexto) {
  * que solo se usan si terminan entre T0 − 20 min y T0 + 1 h (se entrenó con la hora antes de T0)
  * y son de la misma versión que el modelo (meta.rayos); contexto.ir: lo mismo con el infrarrojo
  * (data/infrarrojo.json → modelo, meta.infrarrojo).
+ * contexto.enAeropuerto: false para otro lugar de la ciudad. Ahí la lluvia que el aeropuerto ya
+ * reporta en la hora en curso no cuenta como observada: entra al modelo como lluvia de la hora
+ * anterior, y la probabilidad la deciden los rayos y el infrarrojo medidos desde el lugar.
  */
 export function procesarRespuesta(
   { clima, modelos = null, ensamble = null },
-  { nino = null, aeropuerto = null, rayos = null, ir = null } = {},
+  { nino = null, aeropuerto = null, rayos = null, ir = null, enAeropuerto = true } = {},
 ) {
   const series = ensamble ? seriesEnsamble(ensamble) : null;
   const h = clima.hourly;
@@ -242,8 +245,11 @@ export function procesarRespuesta(
   // Si un reporte de la hora siguiente al resumen ya trae lluvia (un especial, por ejemplo), esa
   // hora ya cuenta como lluviosa y las siguientes se calculan desde ella. Si es la hora en curso,
   // se muestra como observada (100 %).
+  // Lejos del aeropuerto, la lluvia de la hora en curso cuenta como de la hora anterior: llovió
+  // cerca, pero no se sabe si en el lugar.
   const lloviendo = aeropuertoVigente?.lloviendo ?? null;
-  const resumen = lloviendo ? { hora: lloviendo.hora, lluvia_ahora: 1, lluvia_3h: 1 } : aeropuertoVigente;
+  const horaLloviendo = lloviendo && !enAeropuerto && lloviendo.hora === horaLluvia ? horaActual : lloviendo?.hora;
+  const resumen = lloviendo ? { hora: horaLloviendo, lluvia_ahora: 1, lluvia_3h: 1 } : aeropuertoVigente;
   const atraso = resumen ? horasEntre(resumen.hora, horaActual) : 0; // −1, 0 o 1
   const observada = atraso === -1;
   // Los rayos se usan solo si se calcularon igual que para entrenar este modelo: justo después de
@@ -254,7 +260,10 @@ export function procesarRespuesta(
   // El infrarrojo (data/infrarrojo.json → modelo), con el mismo criterio que los rayos.
   const desfaseIR = ir?.hasta ? horasEntre(horaActual, ir.hasta) : NaN;
   const irVigente = ir?.version === META.infrarrojo && desfaseIR >= -1 / 3 && desfaseIR <= 1 ? ir : null;
-  const contextoAhora = { nino, aeropuerto: resumen, rayos: rayosVigentes, ir: irVigente };
+  // Cuánto después del resumen del aeropuerto se midieron los rayos y el infrarrojo (de 0 a 50 min,
+  // en fracción de hora): el modelo se entrenó así, con datos cada 10 minutos.
+  const fraccion = rayosVigentes ? Math.min(Math.max(desfaseRayos + atraso, 0), 5 / 6) : 0;
+  const contextoAhora = { nino, aeropuerto: resumen, rayos: rayosVigentes, ir: irVigente, fraccion };
   /** Para la hora T0 + k: el modelo con k horas de anticipación, más el atraso del aeropuerto. */
   const contextoHora = (k) => ({ ...contextoAhora, adelanto: Math.min(k + atraso, ADELANTO_MAX) });
   // Condiciones de ahora y «próximas 6 h» (desde T0, con el aeropuerto hasta T0 si ya llegó)

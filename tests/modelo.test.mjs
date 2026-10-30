@@ -129,6 +129,19 @@ test('probabilidad del ensamble: promedio de modelos, en la hora y en 6 h', () =
   assert.equal(proyeccion.find((f) => f.hora.endsWith('17:00')).probabilidad, 0);
 });
 
+test('la lluvia del aeropuerto en la hora en curso solo es observada en el aeropuerto', () => {
+  const aeropuerto = {
+    hora: '2026-02-10T15:00', lluvia_ahora: 0, lluvia_3h: 0, lloviendo: { hora: '2026-02-10T16:00', desde: '15:20' },
+  };
+  const enAeropuerto = procesarRespuesta({ clima: CLIMA, ensamble: ENSAMBLE }, { aeropuerto }).actual;
+  assert.equal(enAeropuerto.fuente, 'aeropuerto');
+  assert.equal(enAeropuerto.probabilidad, 100);
+  const enLugar = procesarRespuesta({ clima: CLIMA, ensamble: ENSAMBLE }, { aeropuerto, enAeropuerto: false }).actual;
+  assert.equal(enLugar.fuente, 'ensamble');
+  assert.equal(enLugar.probabilidad, 25);
+  assert.equal(enLugar.lloviendo, null);
+});
+
 test('sin ensambles la probabilidad cae a la heurística', () => {
   const { actual } = procesarRespuesta({ clima: CLIMA, ensamble: null });
   assert.equal(actual.fuente, 'heuristica');
