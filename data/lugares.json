@@ -1,5 +1,5 @@
 {
- "generado": "2026-10-30T22:20:28.685Z",
+ "generado": "2026-10-30T22:30:21.160Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,11 +7,41 @@
    "horas": [
     {
      "hora": "2026-10-30T18:00",
-     "probabilidad": 86
+     "probabilidad": 83
     },
     {
      "hora": "2026-10-30T19:00",
+     "probabilidad": 89
+    },
+    {
+     "hora": "2026-10-30T20:00",
      "probabilidad": 90
+    },
+    {
+     "hora": "2026-10-30T21:00",
+     "probabilidad": 84
+    },
+    {
+     "hora": "2026-10-30T22:00",
+     "probabilidad": 69
+    },
+    {
+     "hora": "2026-10-30T23:00",
+     "probabilidad": 69
+    }
+   ]
+  },
+  {
+   "nombre": "Lugar A",
+   "usaRayos": true,
+   "horas": [
+    {
+     "hora": "2026-10-30T18:00",
+     "probabilidad": 83
+    },
+    {
+     "hora": "2026-10-30T19:00",
+     "probabilidad": 88
     },
     {
      "hora": "2026-10-30T20:00",
@@ -32,46 +62,16 @@
    ]
   },
   {
-   "nombre": "Lugar A",
-   "usaRayos": true,
-   "horas": [
-    {
-     "hora": "2026-10-30T18:00",
-     "probabilidad": 86
-    },
-    {
-     "hora": "2026-10-30T19:00",
-     "probabilidad": 89
-    },
-    {
-     "hora": "2026-10-30T20:00",
-     "probabilidad": 90
-    },
-    {
-     "hora": "2026-10-30T21:00",
-     "probabilidad": 84
-    },
-    {
-     "hora": "2026-10-30T22:00",
-     "probabilidad": 71
-    },
-    {
-     "hora": "2026-10-30T23:00",
-     "probabilidad": 70
-    }
-   ]
-  },
-  {
    "nombre": "Lugar B",
    "usaRayos": true,
    "horas": [
     {
      "hora": "2026-10-30T18:00",
-     "probabilidad": 84
+     "probabilidad": 80
     },
     {
      "hora": "2026-10-30T19:00",
-     "probabilidad": 87
+     "probabilidad": 86
     },
     {
      "hora": "2026-10-30T20:00",
@@ -79,7 +79,7 @@
     },
     {
      "hora": "2026-10-30T21:00",
-     "probabilidad": 84
+     "probabilidad": 83
     },
     {
      "hora": "2026-10-30T22:00",
@@ -87,7 +87,7 @@
     },
     {
      "hora": "2026-10-30T23:00",
-     "probabilidad": 70
+     "probabilidad": 69
     }
    ]
   }
