@@ -34,4 +34,18 @@ Reentrenando cada trimestre con todo lo anterior (2025-2026), el vapor de agua m
 
 ## IMERG (NASA)
 
-La prueba con un mes (workflow «Historial de IMERG») falló: desde GitHub Actions casi nunca se pudo conectar al servidor de la NASA («Network is unreachable») y algunas descargas dieron 401 con el token. Pendiente.
+`analisis/datos/imerg/` (de `imerg_historial.py`, versión final, enero a abril de 2025). Desde GitHub Actions casi nunca se pudo conectar al servidor de la NASA («Network is unreachable»), así que se bajó desde una computadora con OPeNDAP (con 8 descargas a la vez, entre 5 minutos y una hora por mes, según lo cargado que esté el servidor).
+
+Comparada con el aeropuerto por hora (2854 horas, 534 con lluvia; entre paréntesis, contando como acierto si el aeropuerto reporta lluvia una hora antes o después):
+
+| IMERG en el cuadro del aeropuerto | Cuando dice que llueve, llovió | Ve las horas con lluvia | Falsas alarmas en horas secas |
+|---|---|---|---|
+| ≥ 0,2 mm/h | 45 % (59 %) | 73 % (81 %) | 21 % |
+| ≥ 0,5 mm/h | 58 % (72 %) | 65 % (73 %) | 11 % |
+| ≥ 1 mm/h | 67 % (81 %) | 55 % (65 %) | 6 % |
+
+Mirando los 3 × 3 cuadros alrededor (unos 33 km) ve más lluvia (82 % con 0,5 mm/h) pero acierta menos (43 %). AUC 0,82 en el cuadro y 0,85 en los 3 × 3. Por día, ve el 89 % de los días con lluvia, pero marca lluvia en el 57 % de los días secos.
+
+Ve la lluvia bastante mejor que la de GOES (RRQPE ve el 30 %), pero hora por hora no coincide con el aeropuerto ni en dos de cada tres casos: es el promedio de un cuadro de 11 km, estimado sobre todo con infrarrojo entre pasadas de los satélites de microondas. Como verdad por lugar metería tanto ruido como el que se quiere corregir, y como variable en vivo no sirve porque la versión más rápida sale unas 4 horas después.
+
+**No se usa como verdad por hora.** Podría servir para comparar cuánto llueve en cada lugar frente al aeropuerto a lo largo de meses (bajándolo con `LUGARES`).
