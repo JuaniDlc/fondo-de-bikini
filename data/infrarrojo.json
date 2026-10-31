@@ -1,21 +1,21 @@
 {
- "generado": "2026-10-31T06:20:19Z",
- "imagen": "2026-10-31T01:20",
+ "generado": "2026-10-31T06:30:21Z",
+ "imagen": "2026-10-31T01:30",
  "modelo": {
-  "hasta": "2026-10-31T01:20",
+  "hasta": "2026-10-31T01:30",
   "version": "c13-v1",
-  "ir_frio_15": 42.4787,
-  "ir_frio_30": 57.0432,
-  "ir_frio_60": 64.8478,
-  "ir_frio_100": 65.831,
-  "ir_frio_30_area": 0.1937,
-  "ir_frio_60_area": 0.177,
-  "ir_frio_100_area": 0.1896,
-  "ir_muy_frio_60_area": 0.0262,
-  "ir_centro": 4.271,
-  "ir_crece_30": -2.3352,
-  "ir_crece_60": -2.8268,
-  "vapor8_60": 229.1339,
-  "vapor10_60": 241.3861
+  "ir_frio_15": 34.1211,
+  "ir_frio_30": 62.5125,
+  "ir_frio_60": 73.697,
+  "ir_frio_100": 73.697,
+  "ir_frio_30_area": 0.1549,
+  "ir_frio_60_area": 0.1971,
+  "ir_frio_100_area": 0.197,
+  "ir_muy_frio_60_area": 0.0323,
+  "ir_centro": 0,
+  "ir_crece_30": 6.0838,
+  "ir_crece_60": 10.2012,
+  "vapor8_60": 228.6316,
+  "vapor10_60": 240.5085
  }
 }
