@@ -1,11 +1,11 @@
 {
- "generado": "2026-11-01T23:00:19Z",
+ "generado": "2026-11-01T23:07:32Z",
  "minutos": 10,
  "archivos": 29,
  "radio_km": 60,
- "rayos": 51,
- "rayos_cerca": 30,
- "mas_cercano_km": 14.0,
+ "rayos": 109,
+ "rayos_cerca": 71,
+ "mas_cercano_km": 11.2,
  "rumbo": "este",
  "modelo": {
   "hasta": "2026-11-01T18:00",
