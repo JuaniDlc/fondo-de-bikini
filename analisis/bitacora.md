@@ -18,8 +18,8 @@ Cada prueba de una mejora del modelo se anota aquí, haya funcionado o no, para 
 | Fecha | Mejora | Resultado | Estado | Commit | Detalle |
 |---|---|---|---|---|---|
 | 2026-11-02 | Dos modelos, con y sin tormenta eléctrica, y un tercero que decide o pesa | Peor que un solo modelo con las mismas variables en todos los pronósticos: de −0,5 a −3,2 %; tomar el porcentaje mayor, de −16 a −65 %. No cumple en ninguno | No subida | solo la prueba, sin commit | [abajo](#2026-11-02-dos-modelos-con-y-sin-tormenta) |
-| 2026-11-02 | Nubes bajas de GOES (canales 3, 7, 13 y 15) | Solas cumplen la regla a 2 h (+2,12 %) y 3 h (+1,58 %); con señales y tibias, +3,76 % y +2,82 %. En las demás, no. En inicios sin rayos, cambia poco | En producción a 2 y 3 h | ver el último commit de nubes bajas | [abajo](#2026-11-02-nubes-bajas-de-goes) |
-| 2026-11-02 | Señales del reporte del aeropuerto + nubes tibias (canal 13) | Hora en curso +2,79 %, cumple la regla; de 2 a 6 h y próximas 6 h, no. En inicios sin rayos, cambia poco | En producción en la hora en curso y a 2 y 3 h | ver el último commit de nubes bajas | [abajo](#2026-11-02-señales-del-aeropuerto-y-nubes-tibias) |
+| 2026-11-02 | Nubes bajas de GOES (canales 3, 7, 13 y 15) | Solas cumplen la regla a 2 h (+2,12 %) y 3 h (+1,58 %); con señales y tibias, +3,76 % y +2,82 %. En las demás, no. En inicios sin rayos, cambia poco | En producción a 2 y 3 h | `8d39711` | [abajo](#2026-11-02-nubes-bajas-de-goes) |
+| 2026-11-02 | Señales del reporte del aeropuerto + nubes tibias (canal 13) | Hora en curso +2,79 %, cumple la regla; de 2 a 6 h y próximas 6 h, no. En inicios sin rayos, cambia poco | En producción en la hora en curso y a 2 y 3 h | `8d39711` | [abajo](#2026-11-02-señales-del-aeropuerto-y-nubes-tibias) |
 | 2026-11-02 | Solo viento + temperatura del mar, de 1 a 6 h | De +0,7 a +2,0 % por hora, sin cumplir la regla; próximas 6 h empeora (−1,7 %) | No subida | solo la prueba | [abajo](#2026-11-02-solo-viento-y-temperatura-del-mar) |
 | 2026-11-02 | Combinado: presión de vapor + viento + temperatura del mar | De +0,4 a +1,7 % según la anticipación; no cumple la regla en ninguna | No subida | solo la prueba | [abajo](#2026-11-02-modelo-combinado) |
 | 2026-11-02 | Variables extra de GFS, repetición de la prueba de octubre: T − Td, nubes bajas, LI, CIN, viento a 10 m, chubascos, CAPE de ICON | Sin mejora. Con aeropuerto, hora en curso 0,031 → 0,031; 6 h 0,075 → 0,076 | No subida | solo la prueba | `experimentos.py` (no se guardó el resultado de octubre; base sin rayos) |
@@ -119,7 +119,7 @@ Ideas sin probar, de [observaciones.md](observaciones.md):
 
 **Decisión (2026-11-02):** se implementan los modelos `hora_completo_1` (señales y tibias), `hora_completo_2` y `hora_completo_3` (señales, tibias y nubes bajas). Si falta un dato se usa `hora_con_vapor`, y los demás lugares siguen sin estas variables, porque solo se probaron en el aeropuerto. De 4 a 6 h y en las próximas 6 h no cambia nada. A 2 y 3 h se juntó lo que cumplió la regla por separado; la combinación también la cumple.
 
-**Respaldo:** el modelo anterior queda en la etiqueta `modelo-anterior-2026-11-02`. Para volver a él: `git revert 509fbc0`, que solo deshace este cambio y no toca los datos. Sus coeficientes (`hora_con_vapor_1` a `3`) siguen además en `assets/mos-coeficientes.js`, porque son el respaldo si falta un dato.
+**Respaldo:** el modelo anterior queda en la etiqueta `modelo-anterior-2026-11-02`. Para volver a él: `git checkout modelo-anterior-2026-11-02 -- assets scripts tests`, y luego commit y push. Solo restaura el código de la página y sus scripts, no toca `data/`. El cambio está en el commit `8d39711`. Sus coeficientes (`hora_con_vapor_1` a `3`) siguen además en `assets/mos-coeficientes.js`, porque son el respaldo si falta un dato.
 
 **Archivos:** [nubes_bajas.md](nubes_bajas.md) (tablas completas), `nubes_bajas.py` y `nubes_bajas_historial.py`.
 
