@@ -119,6 +119,8 @@ Ideas sin probar, de [observaciones.md](observaciones.md):
 
 **Decisión (2026-11-02):** se implementan los modelos `hora_completo_1` (señales y tibias), `hora_completo_2` y `hora_completo_3` (señales, tibias y nubes bajas). Si falta un dato se usa `hora_con_vapor`, y los demás lugares siguen sin estas variables, porque solo se probaron en el aeropuerto. De 4 a 6 h y en las próximas 6 h no cambia nada. A 2 y 3 h se juntó lo que cumplió la regla por separado; la combinación también la cumple.
 
+**Respaldo:** el modelo anterior queda en la etiqueta `modelo-anterior-2026-11-02`. Para volver a él: `git revert COMMIT_NUEVO`, que solo deshace este cambio y no toca los datos. Sus coeficientes (`hora_con_vapor_1` a `3`) siguen además en `assets/mos-coeficientes.js`, porque son el respaldo si falta un dato.
+
 **Archivos:** [nubes_bajas.md](nubes_bajas.md) (tablas completas), `nubes_bajas.py` y `nubes_bajas_historial.py`.
 
 ## 2026-11-02: señales del aeropuerto y nubes tibias
