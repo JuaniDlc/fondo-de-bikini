@@ -3,7 +3,7 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { consultarOpenMeteo, procesarRespuesta, sumarHoras } from '../assets/openmeteo.js';
-import { consultarAeropuerto, consultarNino } from './fuentes.mjs';
+import { conservarResumen, consultarAeropuerto, consultarNino } from './fuentes.mjs';
 
 const DIAS_HISTORIAL = 7;
 const SEMANAS_NINO = 12;
@@ -36,7 +36,8 @@ const [respuesta, ninoNuevo] = await Promise.all([
 // Si CPC no responde, se sigue con el último índice guardado.
 const nino = ninoNuevo ? ninoNuevo.slice(-SEMANAS_NINO) : await leerJSON('nino.json', null);
 const horaActual = `${respuesta.clima.current.time.slice(0, 13)}:00`;
-const aeropuerto = await intentar('Aeropuerto', () => consultarAeropuerto(horaActual), null);
+const aeropuertoNuevo = await intentar('Aeropuerto', () => consultarAeropuerto(horaActual), null);
+const aeropuerto = aeropuertoNuevo && conservarResumen(aeropuertoNuevo, await leerJSON('aeropuerto.json', null));
 
 // Rayos de la última hora: los escribe scripts/rayos.py, que corre justo antes en el workflow.
 const rayos = (await leerJSON('rayos.json', null))?.modelo ?? null;

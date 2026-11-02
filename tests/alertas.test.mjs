@@ -11,6 +11,7 @@ const iso = (t) => new Date(t).toISOString();
 const actual = (p, t = T0) => ({
   generado: iso(t),
   fuente: 'corregido',
+  horaUsaAeropuerto: true,
   horaLluvia: '2026-10-25T23:00',
   probabilidad: Math.min(p, 20),
   proyeccion: [
@@ -39,6 +40,20 @@ test('lluvia: avisa cuando una hora llega a 70 %, no repite, y rearma bajo 50 %'
   assert.equal(r.mensajes.length, 0);
   r = decidir(r.estado, actual(72, min(300)), null, min(300));
   assert.equal(r.mensajes.length, 1);
+});
+
+test('lluvia: sin aeropuerto o con lectura guardada no avisa que bajó, y sigue activa', () => {
+  let r = decidir(estadoInicial(), actual(75), null, T0);
+  assert.equal(r.estado.lluvia.activa, true);
+  r = decidir(r.estado, { ...actual(34, min(10)), horaUsaAeropuerto: false }, null, min(10));
+  assert.equal(r.mensajes.length, 0);
+  assert.equal(r.estado.lluvia.activa, true);
+  r = decidir(r.estado, { ...actual(34, min(20)), guardada: true }, null, min(20));
+  assert.equal(r.mensajes.length, 0);
+  assert.equal(r.estado.lluvia.activa, true);
+  r = decidir(r.estado, actual(34, min(30)), null, min(30)); // lectura completa: ahora sí
+  assert.match(r.mensajes[0], /Bajó el riesgo/);
+  assert.equal(r.estado.lluvia.activa, false);
 });
 
 test('lluvia: ignora lecturas viejas o que no son del modelo corregido', () => {

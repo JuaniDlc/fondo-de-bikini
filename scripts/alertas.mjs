@@ -25,6 +25,10 @@ const nivelRayos = (r) => {
   return r.mas_cercano_km !== null && r.mas_cercano_km <= 25 ? 2 : 1;
 };
 
+// Un dato faltante no cierra el aviso de lluvia: sin el aeropuerto el modelo no sabe si ya llueve,
+// y una lectura guardada (porque falló Open-Meteo) es de antes. Se espera a la siguiente completa.
+const sirveParaCerrar = (actual) => actual.horaUsaAeropuerto === true && !actual.guardada;
+
 export function estadoInicial() {
   return {
     lluvia: { activa: false, enviado: null },
@@ -49,7 +53,7 @@ export function decidir(estado, actual, rayos, ahora = Date.now()) {
     if (!nuevo.lluvia.activa && mayor.probabilidad >= LLUVIA_ACTIVA) {
       nuevo.lluvia = { activa: true, enviado: new Date(ahora).toISOString() };
       mensajes.push(mensajeLluvia(mayor, actual));
-    } else if (nuevo.lluvia.activa && mayor.probabilidad < LLUVIA_DESACTIVA) {
+    } else if (nuevo.lluvia.activa && mayor.probabilidad < LLUVIA_DESACTIVA && sirveParaCerrar(actual)) {
       nuevo.lluvia.activa = false;
       mensajes.push(mensajeLluviaFin(mayor));
     }

@@ -47,7 +47,7 @@ async function lecturaDeAhora(guardada, rayos) {
     return { ...actual, proyeccion, generado: new Date().toISOString() };
   } catch (e) {
     console.warn(`No se pudo recalcular (${e.message}); se usa la última lectura guardada.`);
-    return guardada;
+    return guardada && { ...guardada, guardada: true };
   }
 }
 

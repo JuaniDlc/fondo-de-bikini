@@ -5,13 +5,12 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { aLocal } from '../assets/openmeteo.js';
-import { consultarAeropuerto } from './fuentes.mjs';
+import { conservarResumen, consultarAeropuerto } from './fuentes.mjs';
 
 const archivo = new URL('../data/aeropuerto.json', import.meta.url);
 const horaActual = `${aLocal(new Date()).slice(0, 13)}:00`;
-const resumen = await consultarAeropuerto(horaActual);
-
 const anterior = await readFile(archivo, 'utf8').then(JSON.parse, () => null);
+const resumen = conservarResumen(await consultarAeropuerto(horaActual), anterior);
 const { generado: _g, ...sinFecha } = anterior ?? {};
 if (JSON.stringify(sinFecha) === JSON.stringify(resumen)) {
   console.log('Aeropuerto sin cambios.');

@@ -50,6 +50,20 @@ export function resumirAeropuerto(reportes, horaActual) {
   };
 }
 
+/**
+ * La API a veces devuelve menos reportes que en la consulta anterior. Un reporte publicado no
+ * desaparece: si en la misma hora el resumen nuevo perdió un dato que el anterior tenía, se conserva.
+ */
+export function conservarResumen(nuevo, anterior) {
+  if (anterior?.hora !== nuevo.hora) return nuevo;
+  return {
+    ...nuevo,
+    lluvia_ahora: nuevo.lluvia_ahora ?? anterior.lluvia_ahora ?? null,
+    lluvia_3h: nuevo.lluvia_3h ?? anterior.lluvia_3h ?? null,
+    lloviendo: nuevo.lloviendo ?? anterior.lloviendo ?? null,
+  };
+}
+
 export async function consultarAeropuerto(horaActual) {
   const r = await fetch('https://aviationweather.gov/api/data/metar?ids=SEGU&hours=5&format=json');
   if (!r.ok) throw new Error(`aviationweather.gov respondió ${r.status}`);

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { aplicarMOS, ninoVigente, variablesMOS } from '../assets/mos.js';
-import { huboLluvia, leerNino, resumirAeropuerto } from '../scripts/fuentes.mjs';
+import { conservarResumen, huboLluvia, leerNino, resumirAeropuerto } from '../scripts/fuentes.mjs';
 
 // Casos con datos crudos y el resultado de Python (los escribe analisis/entrenar.py).
 const casos = JSON.parse(readFileSync(new URL('./fixtures/mos-casos.json', import.meta.url), 'utf8'));
@@ -71,6 +71,20 @@ test('resumen del aeropuerto para la hora actual', () => {
   assert.deepEqual(resumirAeropuerto(enCurso, '2026-10-25T22:00').lloviendo,
     { hora: '2026-10-25T23:00', desde: '22:37' });
   assert.equal(resumirAeropuerto(enCurso, '2026-10-25T22:00').lluvia_ahora, 0);
+});
+
+test('el resumen del aeropuerto no pierde datos si la API devuelve menos reportes', () => {
+  const hora = '2026-11-02T10:00';
+  const anterior = { generado: 'x', hora, lluvia_ahora: 1, lluvia_3h: 1, reportes: 7, lloviendo: null };
+  const incompleto = { hora, lluvia_ahora: null, lluvia_3h: null, reportes: 6, lloviendo: null };
+  assert.deepEqual(conservarResumen(incompleto, anterior),
+    { hora, lluvia_ahora: 1, lluvia_3h: 1, reportes: 6, lloviendo: null });
+  // Lo que sí trae el resumen nuevo gana, y una hora nueva no hereda nada
+  const nuevo = { ...incompleto, lluvia_ahora: 0, lluvia_3h: 1 };
+  assert.equal(conservarResumen(nuevo, anterior).lluvia_ahora, 0);
+  assert.deepEqual(conservarResumen({ ...incompleto, hora: '2026-11-02T11:00' }, anterior),
+    { ...incompleto, hora: '2026-11-02T11:00' });
+  assert.deepEqual(conservarResumen(incompleto, null), incompleto);
 });
 
 test('lectura del índice de El Niño de CPC', () => {
