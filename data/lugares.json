@@ -1,29 +1,29 @@
 {
- "generado": "2026-11-02T17:00:35.350Z",
+ "generado": "2026-11-02T17:10:30.933Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
-   "usaRayos": false,
+   "usaRayos": true,
    "horas": [
     {
      "hora": "2026-11-02T13:00",
-     "probabilidad": 22
+     "probabilidad": 15
     },
     {
      "hora": "2026-11-02T14:00",
-     "probabilidad": 20
+     "probabilidad": 15
     },
     {
      "hora": "2026-11-02T15:00",
-     "probabilidad": 21
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-02T16:00",
-     "probabilidad": 38
+     "probabilidad": 31
     },
     {
      "hora": "2026-11-02T17:00",
-     "probabilidad": 38
+     "probabilidad": 37
     },
     {
      "hora": "2026-11-02T18:00",
@@ -33,27 +33,27 @@
   },
   {
    "nombre": "Lugar A",
-   "usaRayos": false,
+   "usaRayos": true,
    "horas": [
     {
      "hora": "2026-11-02T13:00",
-     "probabilidad": 22
+     "probabilidad": 15
     },
     {
      "hora": "2026-11-02T14:00",
-     "probabilidad": 20
+     "probabilidad": 16
     },
     {
      "hora": "2026-11-02T15:00",
-     "probabilidad": 21
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-02T16:00",
-     "probabilidad": 38
+     "probabilidad": 31
     },
     {
      "hora": "2026-11-02T17:00",
-     "probabilidad": 38
+     "probabilidad": 37
     },
     {
      "hora": "2026-11-02T18:00",
@@ -63,31 +63,31 @@
   },
   {
    "nombre": "Lugar B",
-   "usaRayos": false,
+   "usaRayos": true,
    "horas": [
     {
      "hora": "2026-11-02T13:00",
-     "probabilidad": 22
+     "probabilidad": 16
     },
     {
      "hora": "2026-11-02T14:00",
-     "probabilidad": 20
+     "probabilidad": 16
     },
     {
      "hora": "2026-11-02T15:00",
-     "probabilidad": 21
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-02T16:00",
-     "probabilidad": 38
+     "probabilidad": 31
     },
     {
      "hora": "2026-11-02T17:00",
-     "probabilidad": 38
+     "probabilidad": 37
     },
     {
      "hora": "2026-11-02T18:00",
-     "probabilidad": 27
+     "probabilidad": 28
     }
    ]
   }
