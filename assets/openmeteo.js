@@ -249,7 +249,11 @@ export function procesarRespuesta(
   // cerca, pero no se sabe si en el lugar.
   const lloviendo = aeropuertoVigente?.lloviendo ?? null;
   const horaLloviendo = lloviendo && !enAeropuerto && lloviendo.hora === horaLluvia ? horaActual : lloviendo?.hora;
-  const resumen = lloviendo ? { hora: horaLloviendo, lluvia_ahora: 1, lluvia_3h: 1 } : aeropuertoVigente;
+  const resumenAeropuerto = lloviendo
+    ? { hora: horaLloviendo, lluvia_ahora: 1, lluvia_3h: 1, senales: lloviendo.senales }
+    : aeropuertoVigente;
+  // Las señales del reporte describen el aeropuerto y solo se probaron ahí: los demás lugares no las usan.
+  const resumen = resumenAeropuerto && !enAeropuerto ? { ...resumenAeropuerto, senales: null } : resumenAeropuerto;
   const atraso = resumen ? horasEntre(resumen.hora, horaActual) : 0; // −1, 0 o 1
   const observada = atraso === -1;
   // Los rayos se usan solo si se calcularon igual que para entrenar este modelo: justo después de
@@ -295,6 +299,7 @@ export function procesarRespuesta(
     horaUsaRayos: Boolean(mosSig?.horaUsaRayos),
     horaUsaIR: Boolean(mosSig?.horaUsaIR),
     horaUsaVapor: Boolean(mosSig?.horaUsaVapor),
+    horaUsaSenales: Boolean(mosSig?.horaUsaSenales),
     momento: c.time,
     presion3h: P3,
     proximas6h: pct(p6),

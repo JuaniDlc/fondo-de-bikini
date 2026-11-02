@@ -172,6 +172,88 @@ def vapor_cada_10min():
     return n[VAPOR].ffill(limit=6)
 
 
+# Señales del reporte del aeropuerto, nubes tibias y nubes bajas (analisis/senales_aeropuerto.md y
+# analisis/nubes_bajas.md). Solo las usan los modelos que cumplieron la regla: la hora en curso sin
+# nubes bajas; a 2 y 3 h, con ellas. En vivo: scripts/fuentes.mjs y scripts/infrarrojo.py.
+SENALES = ['vc', 'vc_3h', 'ts', 'cb', 'techo', 'base', 'vis', 'sp', 'sp_cambio_3h', 'pres_cambio_3h', 'u_m', 'v_m',
+           'tend_lluvia']
+TIBIAS = ['tb_centro', 'tb_15', 't_menos_tb']
+RADIOS_BAJAS = (15, 30, 60)
+BAJAS = [f'{c}_{r}' for r in RADIOS_BAJAS for c in ('tibia', 'd13_15', 'noche_d13_7', 'luz')] + ['luz_centro']
+COMPLETO = {1: SENALES + TIBIAS, 2: SENALES + TIBIAS + BAJAS, 3: SENALES + TIBIAS + BAJAS}
+
+
+def leer_reporte(texto):
+    partes = re.split(r'\s(?=NOSIG|TEMPO|BECMG|RMK)', str(texto))
+    cuerpo = partes[0]
+    tendencia = ' '.join(p for p in partes[1:] if not p.startswith(('RMK', 'NOSIG')))
+    capas = re.findall(r'\b(FEW|SCT|BKN|OVC)(\d{3})', cuerpo)
+    techos = [int(a) * 100 for c, a in capas if c in ('BKN', 'OVC')]
+    alturas = [int(a) * 100 for _, a in capas]
+    vis = re.search(r'KT(?:\s\d{3}V\d{3})?\s(\d{4})\b', cuerpo)
+    temp = re.search(r'\s(M?\d\d)/(M?\d\d)\b', cuerpo)
+    pres = re.search(r'\bQ(\d{4})\b', cuerpo)
+    viento = re.search(r'\b(\d{3})(\d{2,3})(?:G\d+)?KT\b', cuerpo)
+    grados = lambda s: float(s.replace('M', '-'))  # noqa: E731
+    u, v = 0.0, 0.0
+    if viento:
+        rad, f = np.radians(float(viento[1])), float(viento[2])
+        u, v = -f * np.sin(rad), -f * np.cos(rad)
+    return {'vc': float(bool(re.search(r'\bVC(SH|TS)\b', cuerpo))),
+            'ts': float(bool(re.search(r'(?:^|\s)[+-]?(VC)?TS', cuerpo))),
+            'cb': float('CB' in cuerpo),
+            'techo': np.log1p(min(techos)) if techos else np.log1p(12000),
+            'base': np.log1p(min(alturas)) if alturas else np.log1p(12000),
+            'vis': np.log1p(float(vis[1])) if vis else np.log1p(9999),
+            'sp': grados(temp[1]) - grados(temp[2]) if temp else np.nan,
+            'pres': float(pres[1]) if pres else np.nan, 'u_m': u, 'v_m': v,
+            'tend_lluvia': float(bool(re.search(r'RA|DZ|TS|SH', tendencia)))}
+
+
+def senales_por_hora():
+    """En la hora H: los reportes de (H − 1 h, H], igual que la lluvia del aeropuerto."""
+    m = pd.read_csv(DATOS / 'metar_segu.csv')
+    m['hora'] = pd.to_datetime(m['valid']).dt.ceil('h')
+    f = pd.DataFrame([leer_reporte(x) for x in m['metar']], index=m['hora'])
+    g = f.groupby(level=0)
+    h = pd.DataFrame({'vc': g['vc'].max(), 'ts': g['ts'].max(), 'cb': g['cb'].max(), 'techo': g['techo'].min(),
+                      'base': g['base'].min(), 'vis': g['vis'].min(), 'sp': g['sp'].mean(), 'pres': g['pres'].mean(),
+                      'u_m': g['u_m'].mean(), 'v_m': g['v_m'].mean(), 'tend_lluvia': g['tend_lluvia'].max()})
+    h = h.reindex(pd.date_range(h.index.min(), h.index.max(), freq='h'))
+    h['sp'], h['pres'] = h['sp'].ffill(limit=2), h['pres'].ffill(limit=2)
+    h['vc_3h'] = h['vc'].rolling(3, min_periods=1).max()
+    h['sp_cambio_3h'] = h['sp'] - h['sp'].shift(3)
+    h['pres_cambio_3h'] = h['pres'] - h['pres'].shift(3)
+    return h[SENALES]
+
+
+def tibias_cada_10min():
+    ir = imagenes_infrarrojo()
+    v = pd.DataFrame({'tb_centro': ir['tb_centro'], 'tb_15': ir['tbmin_15']})
+    v.index = v.index + pd.Timedelta(minutes=10)
+    return v
+
+
+def bajas_cada_10min():
+    """Una imagen por hora (analisis/datos/nubes-bajas/): en el minuto t, la de la hora que empezó, o la
+    anterior si aún no llega, igual que scripts/infrarrojo.py."""
+    import sys
+    sys.path.insert(0, str(AQUI.parent / 'scripts'))
+    from infrarrojo import coseno_sol, variables_bajas
+    archivos = sorted((DATOS / 'nubes-bajas').glob('nubes-bajas-*.csv'))
+    if not archivos:
+        return None
+    n = pd.concat([pd.read_csv(a) for a in archivos])
+    n['inicio'] = (pd.to_datetime(n['inicio'], utc=True).dt.tz_convert('America/Guayaquil')
+                   .dt.tz_localize(None).dt.floor('10min'))
+    n = n.drop_duplicates('inicio').set_index('inicio').sort_index()
+    cos = coseno_sol(n.index.day_of_year.to_numpy(), n.index.hour.to_numpy() + n.index.minute.to_numpy() / 60)
+    v = pd.DataFrame(variables_bajas(n, cos), index=n.index)[BAJAS]
+    v = v.reindex(pd.date_range(v.index.min(), v.index.max(), freq='10min'))
+    v.index = v.index + pd.Timedelta(minutes=10)
+    return v.ffill(limit=6)
+
+
 def comprobar_infrarrojo(ir, v):
     """scripts/infrarrojo.py (en vivo) debe calcular lo mismo que variables_infrarrojo."""
     import sys
@@ -344,6 +426,13 @@ def cargar() -> pd.DataFrame:
     if vapor is not None:
         CADA_10MIN['vapor'] = vapor
         df = df.join(vapor)
+
+    CADA_10MIN['tibias'] = tibias_cada_10min()
+    bajas = bajas_cada_10min()
+    if bajas is not None:
+        CADA_10MIN['bajas'] = bajas
+    CADA_10MIN['senales'] = senales_por_hora()
+    df['t_aire'] = p['temperature_2m_gfs_seamless']
 
     pres = p['pressure_msl_gfs_seamless']
     df['heuristica'] = heuristica(pres, pres.shift(3), p['temperature_2m_gfs_seamless'],
@@ -533,6 +622,7 @@ COLUMNAS_FIXTURE = {
     'cape_icon_seamless': 'cape_icon_seamless',
     'relative_humidity_2m_gfs_seamless': 'relative_humidity_2m_gfs_seamless',
     'cloud_cover_gfs_seamless': 'cloud_cover_gfs_seamless',
+    'temperature_2m_gfs_seamless': 'temperature_2m_gfs_seamless',
 }
 
 
@@ -551,9 +641,13 @@ def previas(df, k, minutos=0):
     d['lluvia_previa'] = d['y_hora'].shift(k)
     d['lluvia_previa_3h'] = d['y_hora'].shift(k).rolling(3, min_periods=3).max()
     t = d.index - pd.Timedelta(hours=k) + pd.Timedelta(minutes=minutos)
-    for nombre, cols in (('rayos', RAYOS), ('ir', IR), ('vapor', VAPOR)):
+    for nombre, cols in (('rayos', RAYOS), ('ir', IR), ('vapor', VAPOR), ('tibias', TIBIAS[:2]), ('bajas', BAJAS)):
         if nombre in CADA_10MIN:
             d[cols] = CADA_10MIN[nombre].reindex(t)[cols].to_numpy()
+    if 'senales' in CADA_10MIN:  # el reporte, de la última hora terminada, como la lluvia
+        d[SENALES] = CADA_10MIN['senales'].reindex(d.index - pd.Timedelta(hours=k))[SENALES].to_numpy()
+    if 'tibias' in CADA_10MIN:
+        d['t_menos_tb'] = d['t_aire'] + 273.15 - d['tb_centro']
     d['fraccion'] = minutos / 60
     for c in RAYOS + IR:
         if c in d:
@@ -653,6 +747,9 @@ def exportar_produccion(df, p):
         if con_vapor and k in ADELANTOS_IR:
             ajustar(f'hora_con_vapor_{k}', pila, VARIABLES['hora'] + PREVIA + RAYOS + IR + VAPOR + FRACCION_IR,
                     'y_hora', k)
+        if con_vapor and 'bajas' in CADA_10MIN and k in COMPLETO:
+            ajustar(f'hora_completo_{k}', pila, VARIABLES['hora'] + PREVIA + RAYOS + IR + VAPOR + FRACCION_IR + COMPLETO[k],
+                    'y_hora', k)
 
     meta = {'entrenado': pd.Timestamp.today().strftime('%Y-%m-%d'),
             'datos': f'{df.index[0]:%Y-%m-%d} a {df.index[-1]:%Y-%m-%d}',
@@ -674,6 +771,9 @@ def exportar_produccion(df, p):
     if con_rayos:
         elegidas.append(datos6.loc[comunes, 'cercania_20m'].idxmax())  # una con rayos encima
     casos = []
+    dato = lambda x: None if pd.isna(x) else float(x)  # noqa: E731
+    crudos = pd.read_csv(DATOS / 'metar_segu.csv')
+    crudos['valid'] = pd.to_datetime(crudos['valid'])
     for n, t in enumerate(elegidas):
         # Cada caso con los rayos y el infrarrojo de otro minuto de la hora (0 a 50), si los hay.
         minutos = MINUTOS[n % len(MINUTOS)]
@@ -700,8 +800,14 @@ def exportar_produccion(df, p):
             # Para «la hora T» con k horas de anticipación: el aeropuerto hasta T − k
             'aeropuerto_previo': {
                 str(k): {'lluvia_ahora': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa']),
-                         'lluvia_3h': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa_3h'])}
+                         'lluvia_3h': float(filas[nombre_previa(k)][0].loc[t, 'lluvia_previa_3h']),
+                         'senales': {c: dato(previa[k][c].iloc[0]) for c in SENALES}}
                 for k in ADELANTOS},
+            # Los reportes crudos antes de T − 1, para comprobar que JavaScript los lee igual
+            'reportes_previos': {
+                'hora': (t - pd.Timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M'),
+                'reportes': [{'fecha': (x.valid + pd.Timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M:00Z'), 'metar': x.metar}
+                             for x in crudos[(crudos['valid'] > t - pd.Timedelta(hours=8)) & (crudos['valid'] <= t - pd.Timedelta(hours=1))].itertuples()]},
             # Rayos de la hora antes de T (6 h) y de la hora antes de T − k + minutos (la hora T)
             'minutos': minutos,
             **({'rayos': {c: float(df.loc[t, c]) for c in RAYOS},
@@ -709,7 +815,8 @@ def exportar_produccion(df, p):
                if con_rayos else {}),
             # Infrarrojo (y vapor) de la imagen antes de T − k + minutos (la hora T, k = 1 … 4); el
             # vapor de la hora antes de T va con el infrarrojo de T (6 h)
-            **({'ir_previo': {str(k): {c: float(previa[k][c].iloc[0]) for c in IR + (VAPOR if con_vapor else [])}
+            **({'ir_previo': {str(k): {c: dato(previa[k][c].iloc[0])
+                                       for c in IR + (VAPOR if con_vapor else []) + TIBIAS[:2] + BAJAS if c in previa[k]}
                               for k in ADELANTOS_IR}}
                if con_ir else {}),
             **({'ir': {c: float(df.loc[t, c]) for c in IR + VAPOR}} if con_vapor else {}),

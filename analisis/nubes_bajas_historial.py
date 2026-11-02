@@ -15,68 +15,23 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import h5py
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from infrarrojo import ArchivoRemoto, FILAS, _escalar, distancias, geometria  # noqa: E402
+from infrarrojo import CAMPOS_BAJAS as CAMPOS, leer_caja, resumen_bajas  # noqa: E402
 from infrarrojo_historial import BUCKETS, inicio, pedir  # noqa: E402
 from nubes_historial import claves  # noqa: E402
 
-RADIOS = (15, 30, 60)
-CAMPOS = (['c13_centro', 'c3_centro']
-          + [f'{c}_{r}' for r in RADIOS for c in ('c7', 'c13', 'c15', 'tibia', 'd13_7', 'd13_15', 'c3')])
-
 
 def leer_canal(sat_clave):
-    """Recuadro de un canal. El de 1 km se promedia a 2 km para que coincida píxel a píxel."""
     sat, clave = sat_clave
     try:
-        with h5py.File(ArchivoRemoto(BUCKETS[sat] + clave, pedir), 'r') as f:
-            fila, columna, plat, plon = geometria(f)
-            ancho = f['CMI'].shape[0]
-            cmi = f['CMI']
-            if ancho > 6000:  # 1 km: el doble de píxeles
-                fi, co = fila, columna
-                crudo = cmi[fi - 2 * FILAS: fi + 2 * FILAS + 2, co - 2 * FILAS: co + 2 * FILAS + 2]
-                x = _escalar(cmi, crudo.astype(float))
-                x[crudo == cmi.attrs['_FillValue'][0]] = np.nan
-                x = x.reshape(2 * FILAS + 1, 2, 2 * FILAS + 1, 2).mean(axis=(1, 3))
-            else:
-                crudo = cmi[fila - FILAS: fila + FILAS + 1, columna - FILAS: columna + FILAS + 1]
-                x = _escalar(cmi, crudo.astype(float))
-                x[crudo == cmi.attrs['_FillValue'][0]] = np.nan
+        x, plat, plon = leer_caja(BUCKETS[sat] + clave, pedir)
         return inicio(clave), x.astype(np.float32), plat, plon
     except Exception as e:  # noqa: BLE001
         print(f'  no se pudo leer {clave}: {e}', flush=True)
         return inicio(clave), None, None, None
-
-
-def resumir(imagenes):
-    """Variables de una hora a partir de {canal: recuadro}. Tibia: entre 273 y 290 K en el canal 13."""
-    v = {c: math.nan for c in CAMPOS}
-    c13, c7, c15, c3 = (imagenes.get(c, (None, None, None))[0] for c in ('C13', 'C07', 'C15', 'C03'))
-    if c13 is None:
-        return v
-    _, plat, plon = imagenes['C13']
-    d = distancias(plat, plon)
-    media = lambda x, s: float(np.nanmean(x[s])) if np.isfinite(x[s]).any() else math.nan  # noqa: E731
-    centro = d <= 5
-    v['c13_centro'] = media(c13, centro)
-    if c3 is not None:
-        v['c3_centro'] = media(c3, centro)
-    for r in RADIOS:
-        s = d <= r
-        v[f'c13_{r}'] = media(c13, s)
-        v[f'tibia_{r}'] = media(((c13 >= 273) & (c13 < 290)).astype(float), s)
-        if c7 is not None:
-            v[f'c7_{r}'], v[f'd13_7_{r}'] = media(c7, s), media(c13 - c7, s)
-        if c15 is not None:
-            v[f'c15_{r}'], v[f'd13_15_{r}'] = media(c15, s), media(c13 - c15, s)
-        if c3 is not None:
-            v[f'c3_{r}'] = media(c3, s)
-    return v
 
 
 def hora_completa(hora):
@@ -87,7 +42,7 @@ def hora_completa(hora):
             t, x, plat, plon = leer_canal(lista[0])
             if x is not None:
                 canales[canal] = (x, plat, plon)
-    return hora, resumir(canales)
+    return hora, resumen_bajas(canales)
 
 
 def main():

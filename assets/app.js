@@ -338,6 +338,7 @@ function dibujarDebug() {
     ['Usa los rayos del satélite (esta hora / 6 h)', `${actual.horaUsaRayos ? 'sí' : 'no'} / ${actual.usaRayos ? 'sí' : 'no'}`],
     ['Usa el infrarrojo (esta hora)', actual.horaUsaIR ? 'sí' : 'no'],
     ['Usa el vapor de agua (esta hora / 6 h)', `${actual.horaUsaVapor ? 'sí' : 'no'} / ${actual.usaVapor ? 'sí' : 'no'}`],
+    ['Usa las señales del aeropuerto y las nubes tibias (esta hora)', actual.horaUsaSenales ? 'sí' : 'no'],
     ['Vapor de agua: canal 8 / canal 10 a 60 km (K)', actual.ir?.vapor8_60
       ? `${f(actual.ir.vapor8_60, 0)} / ${f(actual.ir.vapor10_60, 0)}` : '—'],
     ['Infrarrojo: nube más fría a 30 km / crecimiento en 30 min (K)', actual.ir

@@ -22,12 +22,88 @@ function horaDelReporte(fecha) {
   return local.endsWith(':00') ? base : sumarHoras(base, 1);
 }
 
+const grados = (s) => Number(s.replace('M', '-'));
+
+/** Lo que dice un reporte, además de la lluvia. Igual que leer_reporte de analisis/entrenar.py. */
+export function leerReporte(metar) {
+  const [cuerpo, ...resto] = String(metar).split(/\s(?=NOSIG|TEMPO|BECMG|RMK)/);
+  const tendencia = resto.filter((p) => !/^(RMK|NOSIG)/.test(p)).join(' ');
+  const capas = [...cuerpo.matchAll(/\b(FEW|SCT|BKN|OVC)(\d{3})/g)];
+  const techos = capas.filter((c) => c[1] === 'BKN' || c[1] === 'OVC').map((c) => Number(c[2]) * 100);
+  const alturas = capas.map((c) => Number(c[2]) * 100);
+  const vis = cuerpo.match(/KT(?:\s\d{3}V\d{3})?\s(\d{4})\b/);
+  const temp = cuerpo.match(/\s(M?\d\d)\/(M?\d\d)\b/);
+  const pres = cuerpo.match(/\bQ(\d{4})\b/);
+  const viento = cuerpo.match(/\b(\d{3})(\d{2,3})(?:G\d+)?KT\b/);
+  const rad = viento ? (Number(viento[1]) * Math.PI) / 180 : 0;
+  const fuerza = viento ? Number(viento[2]) : 0;
+  return {
+    vc: /\bVC(SH|TS)\b/.test(cuerpo) ? 1 : 0,
+    ts: /(?:^|\s)[+-]?(VC)?TS/.test(cuerpo) ? 1 : 0,
+    cb: cuerpo.includes('CB') ? 1 : 0,
+    techo: Math.log1p(techos.length ? Math.min(...techos) : 12000),
+    base: Math.log1p(alturas.length ? Math.min(...alturas) : 12000),
+    vis: Math.log1p(vis ? Number(vis[1]) : 9999),
+    sp: temp ? grados(temp[1]) - grados(temp[2]) : null,
+    pres: pres ? Number(pres[1]) : null,
+    u_m: -fuerza * Math.sin(rad),
+    v_m: -fuerza * Math.cos(rad),
+    tend_lluvia: /RA|DZ|TS|SH/.test(tendencia) ? 1 : 0,
+  };
+}
+
+const promedio = (xs) => {
+  const ok = xs.filter((x) => x !== null);
+  return ok.length ? ok.reduce((s, x) => s + x, 0) / ok.length : null;
+};
+const seis = (x) => (x === null ? null : Number(x.toFixed(6)));
+
+/**
+ * Señales del modelo para la hora dada, con sus reportes de (hora − 1 h, hora]: igual que
+ * senales_por_hora de analisis/entrenar.py. null si esa hora no tiene reportes.
+ * @param {Map<string, object[]>} porHora reportes leídos con leerReporte, por hora
+ */
+function senalesDeHora(porHora, hora) {
+  const reportes = porHora.get(hora);
+  if (!reportes?.length) return null;
+  const de = (c) => reportes.map((r) => r[c]);
+  // La temperatura menos el rocío y la presión se arrastran hasta 2 horas si faltan.
+  const arrastrar = (c, h) => {
+    for (const atras of [0, -1, -2]) {
+      const x = promedio((porHora.get(sumarHoras(h, atras)) ?? []).map((r) => r[c]));
+      if (x !== null) return x;
+    }
+    return null;
+  };
+  const cambio = (c) => {
+    const [a, b] = [arrastrar(c, hora), arrastrar(c, sumarHoras(hora, -3))];
+    return a === null || b === null ? null : a - b;
+  };
+  const vc3h = [0, -1, -2].flatMap((atras) => (porHora.get(sumarHoras(hora, atras)) ?? []).map((r) => r.vc));
+  return {
+    vc: Math.max(...de('vc')),
+    vc_3h: Math.max(...vc3h),
+    ts: Math.max(...de('ts')),
+    cb: Math.max(...de('cb')),
+    techo: seis(Math.min(...de('techo'))),
+    base: seis(Math.min(...de('base'))),
+    vis: seis(Math.min(...de('vis'))),
+    sp: seis(arrastrar('sp', hora)),
+    sp_cambio_3h: seis(cambio('sp')),
+    pres_cambio_3h: seis(cambio('pres')),
+    u_m: seis(promedio(de('u_m'))),
+    v_m: seis(promedio(de('v_m'))),
+    tend_lluvia: Math.max(...de('tend_lluvia')),
+  };
+}
+
 /**
  * Resume los reportes en las dos variables del modelo para la hora actual:
  * lluvia_ahora (en la última hora) y lluvia_3h (en las últimas 3). Si a alguna de esas horas
  * le falta reporte, la variable vale null, igual que en el entrenamiento.
  * lloviendo: si algún reporte de la hora en curso (un especial, por ejemplo) ya trae lluvia,
- * {hora: la hora en curso, desde: "HH:MM" del primero}; si no, null.
+ * {hora: la hora en curso, desde: "HH:MM" del primero, senales}; si no, null.
+ * senales: lo demás que dicen los reportes de la hora (senalesDeHora).
  * @param {{fecha: Date, metar: string}[]} reportes
  */
 export function resumirAeropuerto(reportes, horaActual) {
@@ -35,6 +111,11 @@ export function resumirAeropuerto(reportes, horaActual) {
   for (const r of reportes) {
     const h = horaDelReporte(r.fecha);
     porHora.set(h, (porHora.get(h) ?? 0) || (huboLluvia(r.metar) ? 1 : 0));
+  }
+  const leidos = new Map();
+  for (const r of reportes) {
+    const h = horaDelReporte(r.fecha);
+    leidos.set(h, [...(leidos.get(h) ?? []), leerReporte(r.metar)]);
   }
   const ultimas = [0, -1, -2].map((k) => porHora.get(sumarHoras(horaActual, k)));
   const enCurso = sumarHoras(horaActual, 1);
@@ -46,7 +127,10 @@ export function resumirAeropuerto(reportes, horaActual) {
     lluvia_ahora: ultimas[0] ?? null,
     lluvia_3h: ultimas.every((v) => v !== undefined) ? Math.max(...ultimas) : null,
     reportes: reportes.length,
-    lloviendo: primera ? { hora: enCurso, desde: aLocal(primera.fecha).slice(11, 16) } : null,
+    senales: senalesDeHora(leidos, horaActual),
+    lloviendo: primera
+      ? { hora: enCurso, desde: aLocal(primera.fecha).slice(11, 16), senales: senalesDeHora(leidos, enCurso) }
+      : null,
   };
 }
 
@@ -60,12 +144,13 @@ export function conservarResumen(nuevo, anterior) {
     ...nuevo,
     lluvia_ahora: nuevo.lluvia_ahora ?? anterior.lluvia_ahora ?? null,
     lluvia_3h: nuevo.lluvia_3h ?? anterior.lluvia_3h ?? null,
+    senales: nuevo.senales ?? anterior.senales ?? null,
     lloviendo: nuevo.lloviendo ?? anterior.lloviendo ?? null,
   };
 }
 
 export async function consultarAeropuerto(horaActual) {
-  const r = await fetch('https://aviationweather.gov/api/data/metar?ids=SEGU&hours=5&format=json');
+  const r = await fetch('https://aviationweather.gov/api/data/metar?ids=SEGU&hours=8&format=json');
   if (!r.ok) throw new Error(`aviationweather.gov respondió ${r.status}`);
   const datos = await r.json();
   const reportes = datos.map((m) => ({

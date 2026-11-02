@@ -14,7 +14,7 @@ const VENTANA = COEF.meta.ventana_h;
  * los coeficientes, así la página siempre pide los modelos con que se entrenó.
  */
 export const MODELOS_MOS = COEF.meta.modelos ?? { gfs: 'gfs_seamless', ecmwf: 'ecmwf_ifs025', icon: 'icon_seamless' };
-export const VARIABLES_MOS = ['precipitation', 'cape', 'relative_humidity_2m', 'cloud_cover'];
+export const VARIABLES_MOS = ['precipitation', 'cape', 'relative_humidity_2m', 'cloud_cover', 'temperature_2m'];
 
 /** Variables de rayos que escribe scripts/rayos.py en data/rayos.json (modelo). */
 export const VARIABLES_RAYOS = [
@@ -30,6 +30,17 @@ export const VARIABLES_IR = [
 
 /** Vapor de agua (canales 8 y 10), que scripts/infrarrojo.py agrega al infrarrojo si lo pudo leer. */
 export const VARIABLES_VAPOR = ['vapor8_60', 'vapor10_60'];
+
+/** Lo que dice el reporte del aeropuerto además de la lluvia (scripts/fuentes.mjs → aeropuerto.senales). */
+export const VARIABLES_SENALES = [
+  'vc', 'vc_3h', 'ts', 'cb', 'techo', 'base', 'vis', 'sp', 'sp_cambio_3h', 'pres_cambio_3h', 'u_m', 'v_m', 'tend_lluvia',
+];
+
+/** Nubes tibias y nubes bajas, que scripts/infrarrojo.py agrega al infrarrojo si las pudo leer. */
+export const VARIABLES_NUBES_BAJAS = [
+  'tb_centro', 'tb_15', 'luz_centro',
+  ...[15, 30, 60].flatMap((r) => [`tibia_${r}`, `d13_15_${r}`, `noche_d13_7_${r}`, `luz_${r}`]),
+];
 
 const esNumero = (v) => typeof v === 'number' && Number.isFinite(v);
 
@@ -86,7 +97,10 @@ export function variablesMOS(hourly, i, { nino, aeropuerto, rayos, ir, fraccion 
   // Rayos de la última hora (scripts/rayos.py), con el mismo criterio que el aeropuerto.
   for (const nombre of VARIABLES_RAYOS) v[nombre] = rayos?.[nombre] ?? null;
   // Infrarrojo (nubes de tormenta) de la última imagen, igual que los rayos.
-  for (const nombre of [...VARIABLES_IR, ...VARIABLES_VAPOR]) v[nombre] = ir?.[nombre] ?? null;
+  for (const nombre of [...VARIABLES_IR, ...VARIABLES_VAPOR, ...VARIABLES_NUBES_BAJAS]) v[nombre] = ir?.[nombre] ?? null;
+  for (const nombre of VARIABLES_SENALES) v[nombre] = aeropuerto?.senales?.[nombre] ?? null;
+  const aire = tramo(hourly, 'temperature_2m_gfs_seamless', i, i);
+  v.t_menos_tb = aire && v.tb_centro !== null ? aire[0] + 273.15 - v.tb_centro : null;
   // Qué tan recientes son: fracción de hora entre el resumen del aeropuerto y los rayos (0 a 5/6).
   v.fraccion = fraccion;
   for (const nombre of [...VARIABLES_RAYOS, ...VARIABLES_IR]) {
@@ -146,6 +160,8 @@ export const modeloRayos = (adelanto) => `hora_con_rayos_${adelanto}`;
 export const modeloInfrarrojo = (adelanto) => `hora_con_ir_${adelanto}`;
 /** Igual, con el vapor de agua además del infrarrojo. */
 export const modeloVapor = (adelanto) => `hora_con_vapor_${adelanto}`;
+/** Igual, con las señales del aeropuerto y las nubes tibias y, a 2 y 3 h, las nubes bajas (solo hasta 3 h). */
+export const modeloCompleto = (adelanto) => `hora_completo_${adelanto}`;
 
 /**
  * Probabilidades del modelo corregido para la hora con índice i (la hora i acumula la lluvia
@@ -157,7 +173,8 @@ export function probabilidadesMOS(hourly, i, contexto = {}) {
   const v = variablesMOS(hourly, i, contexto);
   const adelanto = contexto.adelanto ?? 1;
   const intentar = (nombre) => (COEF[nombre] ? aplicarMOS(nombre, v) : null);
-  const horaVapor = intentar(modeloVapor(adelanto));
+  const horaCompleto = intentar(modeloCompleto(adelanto));
+  const horaVapor = horaCompleto ?? intentar(modeloVapor(adelanto));
   const horaIR = horaVapor ?? intentar(modeloInfrarrojo(adelanto));
   const horaRayos = intentar(modeloRayos(adelanto));
   const horaMetar = intentar(modeloPrevia(adelanto));
@@ -170,6 +187,7 @@ export function probabilidadesMOS(hourly, i, contexto = {}) {
     horaUsaRayos: (horaIR ?? horaRayos) !== null,
     horaUsaIR: horaIR !== null,
     horaUsaVapor: horaVapor !== null,
+    horaUsaSenales: horaCompleto !== null,
     proximas6h: seisRayos ?? seisMetar ?? aplicarMOS('6h', v),
     usaAeropuerto: (seisRayos ?? seisMetar) !== null,
     usaRayos: seisRayos !== null,

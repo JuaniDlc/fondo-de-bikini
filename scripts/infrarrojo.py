@@ -9,6 +9,9 @@ Lo usan analisis/infrarrojo_historial.py (historial para entrenar) y el workflow
 10 minutos (python scripts/infrarrojo.py), que escribe data/infrarrojo.json con las variables del
 modelo. Si existen LUGARES y LUGARES_IR (como en scripts/rayos.py), calcula además las variables
 desde el aeropuerto y desde cada lugar y las escribe en LUGARES_IR, fuera del repositorio.
+
+También lee las nubes bajas, que el canal 13 frío no ve: canales 7 y 15 y, de día, el 3. Una imagen
+por hora, como analisis/nubes_bajas_historial.py, con que se entrenó (analisis/nubes_bajas.md).
 """
 
 import datetime as dt
@@ -129,10 +132,16 @@ def distancias(plat, plon, centro=(LAT, LON)):
 
 
 def leer_caja(url, pedir):
-    """Temperatura (K) del recuadro alrededor de Guayaquil y la latitud y longitud de sus píxeles."""
+    """Temperatura (K) del recuadro alrededor de Guayaquil y la latitud y longitud de sus píxeles.
+    El canal de 1 km se promedia a 2 km para que coincida píxel a píxel con los demás."""
     with h5py.File(ArchivoRemoto(url, pedir), 'r') as f:
         fila, columna, plat, plon = geometria(f)
         cmi = f['CMI']
+        if cmi.shape[0] > 6000:  # 1 km: el doble de píxeles
+            crudo = cmi[fila - 2 * FILAS: fila + 2 * FILAS + 2, columna - 2 * FILAS: columna + 2 * FILAS + 2]
+            x = _escalar(cmi, crudo.astype(float))
+            x[crudo == cmi.attrs['_FillValue'][0]] = np.nan
+            return x.reshape(2 * FILAS + 1, 2, 2 * FILAS + 1, 2).mean(axis=(1, 3)), plat, plon
         crudo = cmi[fila - FILAS: fila + FILAS + 1, columna - FILAS: columna + FILAS + 1]
         tb = _escalar(cmi, crudo.astype(float))
         tb[crudo == cmi.attrs['_FillValue'][0]] = np.nan
@@ -168,9 +177,66 @@ def variables_modelo(ahora, antes):
     for c in ('frio_30', 'frio_60', 'frio_100', 'muy_frio_60'):
         v[f'ir_{c}_area'] = ahora[c]
     v['ir_centro'] = frio(ahora['tb_centro'])
+    # Sin el tope de 270 K: las nubes tibias.
+    v['tb_centro'], v['tb_15'] = ahora['tb_centro'], ahora['tbmin_15']
     for km in (30, 60):
         v[f'ir_crece_{km}'] = None if antes is None else min(max(antes[f'tbmin_{km}'] - ahora[f'tbmin_{km}'], -30), 30)
     return None if None in v.values() else {k: round(x, 4) for k, x in v.items()}
+
+
+# ---------- nubes bajas ----------
+
+RADIOS_BAJAS = (15, 30, 60)
+CAMPOS_BAJAS = (['c13_centro', 'c3_centro']
+                + [f'{c}_{r}' for r in RADIOS_BAJAS for c in ('c7', 'c13', 'c15', 'tibia', 'd13_7', 'd13_15', 'c3')])
+CANALES_BAJAS = ('C03', 'C07', 'C15')
+
+
+def resumen_bajas(imagenes, centro=(LAT, LON)):
+    """Resumen de una hora a partir de {canal: (recuadro, lat, lon)}. Tibia: entre 273 y 290 K en el canal 13."""
+    v = {c: math.nan for c in CAMPOS_BAJAS}
+    c13, c7, c15, c3 = (imagenes.get(c, (None, None, None))[0] for c in ('C13', 'C07', 'C15', 'C03'))
+    if c13 is None:
+        return v
+    _, plat, plon = imagenes['C13']
+    d = distancias(plat, plon, centro)
+    media = lambda x, s: float(np.nanmean(x[s])) if np.isfinite(x[s]).any() else math.nan  # noqa: E731
+    cerca = d <= 5
+    v['c13_centro'] = media(c13, cerca)
+    if c3 is not None:
+        v['c3_centro'] = media(c3, cerca)
+    for r in RADIOS_BAJAS:
+        s = d <= r
+        v[f'c13_{r}'] = media(c13, s)
+        v[f'tibia_{r}'] = media(((c13 >= 273) & (c13 < 290)).astype(float), s)
+        if c7 is not None:
+            v[f'c7_{r}'], v[f'd13_7_{r}'] = media(c7, s), media(c13 - c7, s)
+        if c15 is not None:
+            v[f'c15_{r}'], v[f'd13_15_{r}'] = media(c15, s), media(c13 - c15, s)
+        if c3 is not None:
+            v[f'c3_{r}'] = media(c3, s)
+    return v
+
+
+def coseno_sol(dia, hora):
+    """Coseno del ángulo entre el sol y la vertical en Guayaquil, con el día del año y la hora local."""
+    declinacion = np.radians(-23.44) * np.cos(2 * np.pi * (dia + 10) / 365.25)
+    lat = np.radians(LAT)
+    return np.sin(lat) * np.sin(declinacion) + np.cos(lat) * np.cos(declinacion) * np.cos(np.radians(15 * (hora - 12.3)))
+
+
+def variables_bajas(n, cos):
+    """Variables del modelo a partir del resumen de la hora (un dict o una tabla) y coseno_sol."""
+    noche, dia = cos <= 0, cos > 0.15
+    v = {}
+    for r in RADIOS_BAJAS:
+        v[f'tibia_{r}'] = n[f'tibia_{r}']
+        v[f'd13_15_{r}'] = n[f'd13_15_{r}']
+        # De noche; fuera de la noche vale 0: de día el canal 7 lleva también luz del sol.
+        v[f'noche_d13_7_{r}'] = np.where(noche, n[f'd13_7_{r}'], 0 * n[f'd13_7_{r}'])
+        v[f'luz_{r}'] = np.where(dia, n[f'c3_{r}'] / np.where(dia, cos, 1), 0 * n[f'c13_{r}'])
+    v['luz_centro'] = np.where(dia, n['c3_centro'] / np.where(dia, cos, 1), 0 * n['c13_centro'])
+    return v
 
 
 # ---------- en vivo ----------
@@ -221,7 +287,7 @@ def leer_lugares(texto):
 
 def main():
     ahora = dt.datetime.now(dt.timezone.utc)
-    todas = imagenes_recientes(ahora, ('C13', *CANALES_VAPOR))
+    todas = imagenes_recientes(ahora, ('C13', *CANALES_VAPOR, *CANALES_BAJAS))
     claves = todas['C13']
     if not claves:
         raise SystemExit('No se encontraron imágenes infrarrojas recientes')
@@ -238,6 +304,18 @@ def main():
                 cajas_vapor[nombre] = leer_caja(BUCKET + todas[canal][max(recientes)], _pedir)
         except Exception as e:  # noqa: BLE001
             print(f'Vapor de agua ({canal}) no disponible: {e}')
+    # Nubes bajas: la imagen del inicio de la hora, o la de la hora anterior si aún no llegó, como en el
+    # entrenamiento (analisis/entrenar.py, bajas_cada_10min). Si falla, el modelo se calcula sin ellas.
+    imagenes_bajas, hora_bajas = {}, None
+    for t in (ultima.replace(minute=0), ultima.replace(minute=0) - dt.timedelta(hours=1)):
+        if all(t in todas[c] for c in ('C13', *CANALES_BAJAS)):
+            try:
+                imagenes_bajas = {c: cajas[t] if c == 'C13' and t in cajas else leer_caja(BUCKET + todas[c][t], _pedir)
+                                  for c in ('C13', *CANALES_BAJAS)}
+                hora_bajas = t - dt.timedelta(hours=5)
+                break
+            except Exception as e:  # noqa: BLE001
+                print(f'Nubes bajas no disponibles: {e}')
     # Como en el entrenamiento: en la hora T se usa la imagen que empezó a las T − 10 min.
     hasta = (ultima + dt.timedelta(minutes=10) - dt.timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M')
 
@@ -250,6 +328,11 @@ def main():
             x = vapor(tb, distancias(plat, plon, centro))
             if x is not None:
                 v[nombre] = x
+        if imagenes_bajas:
+            cos = coseno_sol(hora_bajas.timetuple().tm_yday, hora_bajas.hour + hora_bajas.minute / 60)
+            bajas = {k: float(x) for k, x in variables_bajas(resumen_bajas(imagenes_bajas, centro), cos).items()}
+            if all(math.isfinite(x) for x in bajas.values()):
+                v.update({k: round(x, 4) for k, x in bajas.items()})
         return {'hasta': hasta, 'version': VERSION_IR, **v}
 
     modelo = para((LAT, LON))
