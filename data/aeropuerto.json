@@ -1,8 +1,8 @@
 {
- "generado": "2026-11-02T19:30:30.360Z",
- "hora": "2026-11-02T14:00",
- "lluvia_ahora": 0,
- "lluvia_3h": 0,
- "reportes": 6,
+ "generado": "2026-11-02T20:00:28.203Z",
+ "hora": "2026-11-02T15:00",
+ "lluvia_ahora": null,
+ "lluvia_3h": null,
+ "reportes": 5,
  "lloviendo": null
 }
