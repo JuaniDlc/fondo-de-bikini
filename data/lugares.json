@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-02T08:30:29.759Z",
+ "generado": "2026-11-02T08:50:23.457Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,27 +7,27 @@
    "horas": [
     {
      "hora": "2026-11-02T04:00",
-     "probabilidad": 94
+     "probabilidad": 97
     },
     {
      "hora": "2026-11-02T05:00",
-     "probabilidad": 94
+     "probabilidad": 96
     },
     {
      "hora": "2026-11-02T06:00",
-     "probabilidad": 93
+     "probabilidad": 95
     },
     {
      "hora": "2026-11-02T07:00",
-     "probabilidad": 94
+     "probabilidad": 95
     },
     {
      "hora": "2026-11-02T08:00",
-     "probabilidad": 88
+     "probabilidad": 86
     },
     {
      "hora": "2026-11-02T09:00",
-     "probabilidad": 79
+     "probabilidad": 77
     }
    ]
   },
@@ -37,27 +37,27 @@
    "horas": [
     {
      "hora": "2026-11-02T04:00",
-     "probabilidad": 93
+     "probabilidad": 96
     },
     {
      "hora": "2026-11-02T05:00",
-     "probabilidad": 93
+     "probabilidad": 96
     },
     {
      "hora": "2026-11-02T06:00",
-     "probabilidad": 93
+     "probabilidad": 95
     },
     {
      "hora": "2026-11-02T07:00",
-     "probabilidad": 93
+     "probabilidad": 95
     },
     {
      "hora": "2026-11-02T08:00",
-     "probabilidad": 87
+     "probabilidad": 85
     },
     {
      "hora": "2026-11-02T09:00",
-     "probabilidad": 79
+     "probabilidad": 76
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-02T04:00",
-     "probabilidad": 94
+     "probabilidad": 97
     },
     {
      "hora": "2026-11-02T05:00",
-     "probabilidad": 94
+     "probabilidad": 96
     },
     {
      "hora": "2026-11-02T06:00",
-     "probabilidad": 93
+     "probabilidad": 95
     },
     {
      "hora": "2026-11-02T07:00",
-     "probabilidad": 94
+     "probabilidad": 95
     },
     {
      "hora": "2026-11-02T08:00",
-     "probabilidad": 88
+     "probabilidad": 85
     },
     {
      "hora": "2026-11-02T09:00",
-     "probabilidad": 79
+     "probabilidad": 76
     }
    ]
   }
