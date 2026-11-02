@@ -18,6 +18,7 @@ import json
 import math
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -33,6 +34,23 @@ BUCKET = 'https://noaa-goes19.s3.amazonaws.com/'
 SALIDA = Path(__file__).resolve().parent.parent / 'data' / 'rayos.json'
 RUMBOS = ['norte', 'noreste', 'este', 'sureste', 'sur', 'suroeste', 'oeste', 'noroeste']
 AEROPUERTO = (-2.1572, -79.8836)  # SEGU
+ESPERAS_S = (2, 5)  # entre intentos de descarga
+
+
+def pedir(url, **kwargs):
+    """GET con reintentos: S3 a veces no responde a tiempo, y son unos 180 archivos por corrida; uno
+    solo no debe hacer fallar todo. Un error definitivo (404) no se reintenta."""
+    for espera in (*ESPERAS_S, None):
+        try:
+            r = requests.get(url, timeout=30, **kwargs)
+            if r.status_code < 500 or espera is None:
+                r.raise_for_status()
+                return r
+        except (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError):
+            if espera is None:
+                raise
+        print(f'S3 no respondió; se reintenta en {espera} s.')
+        time.sleep(espera)
 
 
 def archivos(desde: dt.datetime, hasta: dt.datetime) -> list[str]:
@@ -40,8 +58,7 @@ def archivos(desde: dt.datetime, hasta: dt.datetime) -> list[str]:
     claves = []
     horas = {desde.replace(minute=0, second=0, microsecond=0), hasta.replace(minute=0, second=0, microsecond=0)}
     for h in sorted(horas):
-        r = requests.get(BUCKET, params={'list-type': '2', 'prefix': f'GLM-L2-LCFA/{h:%Y/%j/%H}/'}, timeout=60)
-        r.raise_for_status()
+        r = pedir(BUCKET, params={'list-type': '2', 'prefix': f'GLM-L2-LCFA/{h:%Y/%j/%H}/'})
         for clave in re.findall(r'<Key>([^<]+)</Key>', r.text):
             m = re.search(r'_s(\d{4})(\d{3})(\d{2})(\d{2})(\d{2})', clave)
             inicio = dt.datetime.strptime(''.join(m.groups()), '%Y%j%H%M%S').replace(tzinfo=dt.timezone.utc)
@@ -120,7 +137,7 @@ def bloques_ultima_hora(hasta: dt.datetime, leer_archivo, centro=(LAT, LON)):
 
 def leer(clave):
     """Rayos de buena calidad de un archivo: (lat, lon)."""
-    datos = requests.get(BUCKET + clave, timeout=60).content
+    datos = pedir(BUCKET + clave).content
     with h5py.File(io.BytesIO(datos), 'r') as f:
         lat, lon = f['flash_lat'][:], f['flash_lon'][:]
         calidad = f['flash_quality_flag'][:]
