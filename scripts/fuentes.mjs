@@ -104,6 +104,8 @@ function senalesDeHora(porHora, hora) {
  * lloviendo: si algún reporte de la hora en curso (un especial, por ejemplo) ya trae lluvia,
  * {hora: la hora en curso, desde: "HH:MM" del primero, senales}; si no, null.
  * senales: lo demás que dicen los reportes de la hora (senalesDeHora).
+ * Si el reporte de la hora actual todavía no llega, resume hasta la hora anterior: la página usa
+ * entonces el modelo de una hora más de anticipación, como se entrenó.
  * @param {{fecha: Date, metar: string}[]} reportes
  */
 export function resumirAeropuerto(reportes, horaActual) {
@@ -117,17 +119,19 @@ export function resumirAeropuerto(reportes, horaActual) {
     const h = horaDelReporte(r.fecha);
     leidos.set(h, [...(leidos.get(h) ?? []), leerReporte(r.metar)]);
   }
-  const ultimas = [0, -1, -2].map((k) => porHora.get(sumarHoras(horaActual, k)));
   const enCurso = sumarHoras(horaActual, 1);
+  const anterior = sumarHoras(horaActual, -1);
+  const hora = !porHora.has(horaActual) && porHora.has(anterior) ? anterior : horaActual;
+  const ultimas = [0, -1, -2].map((k) => porHora.get(sumarHoras(hora, k)));
   const primera = reportes
     .filter((r) => horaDelReporte(r.fecha) === enCurso && huboLluvia(r.metar))
     .sort((a, b) => a.fecha - b.fecha)[0];
   return {
-    hora: horaActual,
+    hora,
     lluvia_ahora: ultimas[0] ?? null,
     lluvia_3h: ultimas.every((v) => v !== undefined) ? Math.max(...ultimas) : null,
     reportes: reportes.length,
-    senales: senalesDeHora(leidos, horaActual),
+    senales: senalesDeHora(leidos, hora),
     lloviendo: primera
       ? { hora: enCurso, desde: aLocal(primera.fecha).slice(11, 16), senales: senalesDeHora(leidos, enCurso) }
       : null,
@@ -139,6 +143,11 @@ export function resumirAeropuerto(reportes, horaActual) {
  * desaparece: si en la misma hora el resumen nuevo perdió un dato que el anterior tenía, se conserva.
  */
 export function conservarResumen(nuevo, anterior) {
+  // La API perdió el reporte de la hora que ya teníamos: el resumen no retrocede a la hora anterior.
+  if (anterior?.hora > nuevo.hora && anterior.lluvia_ahora !== null) {
+    const { generado: _g, ...guardado } = anterior;
+    return { ...guardado, reportes: nuevo.reportes, lloviendo: nuevo.lloviendo ?? anterior.lloviendo ?? null };
+  }
   if (anterior?.hora !== nuevo.hora) return nuevo;
   return {
     ...nuevo,

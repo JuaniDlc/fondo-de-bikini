@@ -112,6 +112,24 @@ test('rayos: si vuelve antes de 30 minutos, no avisa que se alejó', () => {
   assert.match(r.mensajes[0], /se alejó/);
 });
 
+test('rayos: con pocos rayos cerca no avisa que se alejó, y al volver no repite', () => {
+  const pocos = (t, n) => ({ generado: iso(t), rayos: n, mas_cercano_km: n ? 17 : null, minutos: 10 });
+  let e = decidir(estadoInicial(), null, { ...pocos(min(0), 20), mas_cercano_km: 20 }, min(0));
+  assert.equal(e.mensajes.length, 1);
+  for (const m of [10, 20, 30, 40]) {
+    e = decidir(e.estado, null, pocos(min(m), 2), min(m));
+    assert.deepEqual(e.mensajes, [], `minuto ${m}`);
+    assert.equal(e.estado.rayos.nivel, 2);
+  }
+  e = decidir(e.estado, null, { ...pocos(min(50), 12), mas_cercano_km: 20 }, min(50));
+  assert.deepEqual(e.mensajes, []);
+  // Sin ningún rayo durante 30 minutos, sí se alejó.
+  e = decidir(e.estado, null, pocos(min(60), 0), min(60));
+  assert.deepEqual(e.mensajes, []);
+  e = decidir(e.estado, null, pocos(min(80), 0), min(80));
+  assert.match(e.mensajes[0], /se alejó/);
+});
+
 test('rayos: sin aviso previo no manda «se alejó»', () => {
   let r = decidir(estadoInicial(), null, rayos(2, 40), T0); // muy pocos: no avisó
   r = decidir(r.estado, null, rayos(0, null, min(60)), min(60));

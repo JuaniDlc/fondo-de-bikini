@@ -52,14 +52,16 @@ export function resumenRayos(r, ahora = Date.now()) {
   const nivel = nivelRayos(r);
   const puntos = (r.puntos ?? []).filter((p) => p.every(Number.isFinite));
   const base = { nivel, minutos: Math.max(minutos, 0), puntos };
-  if (!nivel) return { ...base, etiqueta: 'Sin tormenta eléctrica', titulo: '' };
+  if (!r.rayos) return { ...base, etiqueta: 'Sin tormenta eléctrica', titulo: '' };
   // Se ubica por la celda con rayos más cercana al centro; puede haber más rayos en otras zonas.
   const cercano = puntos[0];
   const lado = cercano ? rumboEnPalabras(cercano[1]) : r.rumbo;
   const pueblo = cercano ? cercaDe(cercano[1], cercano[0]) : null;
   return {
     ...base,
-    etiqueta: 'Hay tormenta eléctrica',
+    // Uno o dos rayos no bastan para llamarla tormenta, pero se muestran.
+    etiqueta: nivel ? 'Hay tormenta eléctrica' : 'Rayos aislados',
+    aislados: !nivel,
     titulo: `A ${Math.round(r.mas_cercano_km)} km${lado ? ` al ${lado}` : ''}${pueblo ? `, cerca de ${pueblo}` : ''}`,
   };
 }

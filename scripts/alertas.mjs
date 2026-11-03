@@ -63,7 +63,10 @@ export function decidir(estado, actual, rayos, ahora = Date.now()) {
     const r = nuevo.rayos;
     r.avisada ??= r.nivel > 0; // estados guardados antes de que existiera el aviso de cierre
     const nivel = nivelRayos(rayos);
-    if (nivel > 0) r.ultimoRayo = rayos.generado;
+    // Tras un aviso, cualquier rayo cuenta como tormenta activa: pocos no bastan para avisar, pero
+    // tampoco para decir que se alejó.
+    const quedanRayos = nivel === 0 && r.avisada && rayos.rayos > 0;
+    if (nivel > 0 || quedanRayos) r.ultimoRayo = rayos.generado;
     const desdeAviso = r.enviado ? minutosDesde(r.enviado, ahora) : Infinity;
     const sube = nivel > r.nivel && (desdeAviso >= ESPERA_RAYOS_MIN || nivel === 2);
     // Si la tormenta no se ha ido (o las revisiones se atrasaron y no se vio irse),
@@ -72,7 +75,7 @@ export function decidir(estado, actual, rayos, ahora = Date.now()) {
     if (sube || sigue) {
       Object.assign(r, { nivel, enviado: new Date(ahora).toISOString(), avisada: true });
       mensajes.push(mensajeRayos(rayos));
-    } else if (nivel === 0) {
+    } else if (nivel === 0 && !quedanRayos) {
       r.nivel = 0;
       const ultimo = r.ultimoRayo ?? r.enviado;
       if (r.avisada && ultimo && minutosDesde(ultimo, ahora) >= SIN_RAYOS_MIN) {

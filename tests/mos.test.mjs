@@ -129,6 +129,31 @@ test('resumen del aeropuerto para la hora actual', () => {
   assert.equal(resumirAeropuerto(enCurso, '2026-10-25T22:00').lluvia_ahora, 0);
 });
 
+test('si el reporte de la hora aún no llega, el resumen usa la hora anterior', () => {
+  const r = (iso, metar) => ({ fecha: new Date(iso), metar });
+  const reportes = [
+    r('2026-11-03T07:00:00Z', 'SEGU 030700Z 36003KT 9999 BKN023 26/24 Q1009 NOSIG'), // 02:00
+    r('2026-11-03T08:00:00Z', 'SEGU 030800Z 01006KT 9999 -RA BKN020 25/24 Q1009 NOSIG'), // 03:00
+    r('2026-11-03T06:00:00Z', 'SEGU 030600Z 33004KT 9999 BKN023 27/23 Q1010 NOSIG'), // 01:00
+  ];
+  const s = resumirAeropuerto(reportes, '2026-11-03T04:00'); // falta el de las 04:00
+  assert.equal(s.hora, '2026-11-03T03:00');
+  assert.equal(s.lluvia_ahora, 1);
+  assert.equal(s.lluvia_3h, 1);
+  assert.ok(s.senales);
+  // Sin reporte tampoco de la hora anterior, no se inventa: queda sin dato.
+  const viejo = resumirAeropuerto(reportes, '2026-11-03T06:00');
+  assert.equal(viejo.hora, '2026-11-03T06:00');
+  assert.equal(viejo.lluvia_ahora, null);
+  // Un especial con lluvia en la hora en curso se sigue viendo.
+  const especial = [...reportes, r('2026-11-03T09:20:00Z', 'SPECI SEGU 030920Z 8000 RA BKN020')];
+  assert.equal(resumirAeropuerto(especial, '2026-11-03T04:00').lloviendo.desde, '04:20');
+  // Si la API pierde el reporte que ya teníamos, el resumen no retrocede.
+  const guardado = { generado: 'x', hora: '2026-11-03T04:00', lluvia_ahora: 1, lluvia_3h: 1, reportes: 8, senales: { vc: 0 }, lloviendo: null };
+  assert.deepEqual(conservarResumen(s, guardado),
+    { hora: '2026-11-03T04:00', lluvia_ahora: 1, lluvia_3h: 1, reportes: s.reportes, senales: { vc: 0 }, lloviendo: null });
+});
+
 test('el resumen del aeropuerto no pierde datos si la API devuelve menos reportes', () => {
   const hora = '2026-11-02T10:00';
   const anterior = { generado: 'x', hora, lluvia_ahora: 1, lluvia_3h: 1, reportes: 7, lloviendo: null };

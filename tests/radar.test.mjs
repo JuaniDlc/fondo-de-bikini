@@ -32,6 +32,13 @@ test('sin rayos solo lo dice, y los datos viejos no se muestran', () => {
   assert.equal(resumenRayos(null, ahora), null);
 });
 
+test('uno o dos rayos se muestran como aislados, no como «sin tormenta»', () => {
+  const r = resumenRayos({ ...base, rayos: 2, mas_cercano_km: 17, puntos: [[17, 94, 2]] }, ahora);
+  assert.equal(r.nivel, 0);
+  assert.equal(r.etiqueta, 'Rayos aislados');
+  assert.match(r.titulo, /^A 17 km al este/);
+});
+
 test('si el archivo aún no trae puntos, la frase igual funciona', () => {
   assert.equal(resumenRayos(base, ahora).titulo, 'A 12 km al noreste');
 });

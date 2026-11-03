@@ -235,15 +235,15 @@ function dibujarRayos() {
   $('rayos-ciudad').hidden = !r;
   if (!r) return;
   $('rayos-nivel').textContent = r.etiqueta;
-  $('rayos-nivel').className = `nivel nivel-${r.nivel}`;
+  $('rayos-nivel').className = `nivel nivel-${r.aislados ? 1 : r.nivel}`;
   $('rayos-titulo').textContent = r.titulo;
   $('rayos-titulo').hidden = !r.titulo;
   $('rayos-nota').textContent = `Satélite GOES, últimos 10 minutos, hace ${r.minutos} min. Medido desde el centro de Guayaquil.`;
   $('radar-region').innerHTML = svgRadar({ radioKm: 60, anillos: [CERCA_KM, 60], lugares: REGION, puntos: r.puntos, nivel: r.nivel });
   // Aquí solo cuentan los rayos de la zona: puede haber tormenta a 40 km y esta seguir tranquila.
-  const enZona = r.nivel === 2;
-  $('ciudad-nivel').textContent = enZona ? 'Hay tormenta eléctrica' : 'Sin tormenta eléctrica';
-  $('ciudad-nivel').className = `nivel nivel-${enZona ? 2 : 0}`;
+  const enZona = r.nivel === 2 || (r.aislados && r.puntos[0]?.[0] <= CERCA_KM);
+  $('ciudad-nivel').textContent = enZona ? r.etiqueta : 'Sin tormenta eléctrica';
+  $('ciudad-nivel').className = `nivel nivel-${!enZona ? 0 : r.aislados ? 1 : 2}`;
   $('ciudad-titulo').textContent = enZona ? r.titulo : '';
   $('ciudad-titulo').hidden = !enZona;
   $('radar-ciudad').innerHTML = svgRadar({ radioKm: CERCA_KM, anillos: [10, CERCA_KM], lugares: CIUDAD, puntos: r.puntos, nivel: r.nivel });
