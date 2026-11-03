@@ -2,3 +2,7 @@
 __pycache__/
 analisis/datos/
 analisis/observaciones.md
+node_modules/
+# Los datos viven en la rama datos: git worktree add data datos
+data/
+_sitio/

@@ -28,6 +28,12 @@ tests/                      pruebas (node:test)
 .github/workflows/actualizar.yml
 ```
 
+## Datos y publicación
+
+Los datos están en la rama `datos`, no en `main`, para que `main` solo tenga cambios de código. Los workflows la bajan en `data/`, guardan ahí y llaman a «Publicar página», que junta `index.html` y `assets/` de `main` con esos datos. En tu computadora, con `git worktree add data datos`, `data/` queda igual; `git -C data pull` la actualiza.
+
+Si cambia el código, «Publicar página» corre antes `node --test` y `tests/navegador.mjs`, que abre la página en Chrome. «Vigía de datos» revisa cada hora que los datos publicados estén al día; si no, falla y GitHub avisa por correo.
+
 ## Publicar en GitHub
 
 1. Crea un repositorio **público** en GitHub (por ejemplo `fondo-de-bikini`) y sube este código a la rama `main`.

@@ -474,7 +474,7 @@ async function iniciar() {
 
   const [actual, historial, nino] = await Promise.allSettled([
     leerJSON('data/actual.json'),
-    leerJSON('data/historial.json'),
+    leerJSON('data/historial-reciente.json'),
     leerJSON('data/nino.json'),
   ]);
   if (historial.status === 'fulfilled' && Array.isArray(historial.value)) estado.historial = historial.value;

@@ -1,0 +1,86 @@
+name: Publicar página
+
+# Publica index.html y assets/ de main con los datos de la rama datos. Corre al cambiar la página y
+# cuando Rayos o Actualizar lectura guardan datos (un push con GITHUB_TOKEN no dispara otros workflows,
+# por eso lo llaman ellos).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - assets/**
+      - scripts/**
+      - tests/**
+      - package-lock.json
+      - .github/workflows/publicar.yml
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probar:
+    # Solo cuando cambia el código: si se probara en cada dato, una falla de la prueba dejaría la
+    # página sin datos nuevos.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Datos (rama datos, en data/)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: datos
+          path: data
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+
+      - name: Pruebas del modelo
+        run: node --test
+
+      - name: Prueba de la página en el navegador
+        run: |
+          npm ci --ignore-scripts
+          node tests/navegador.mjs
+
+  publicar:
+    needs: probar
+    if: ${{ always() && (needs.probar.result == 'success' || needs.probar.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: publicar-pagina
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.desplegar.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Datos (rama datos, en data/)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: datos
+          path: data
+
+      - name: Solo lo que necesita la página
+        run: |
+          mkdir -p _sitio/data
+          cp -r index.html assets _sitio/
+          cp data/*.json _sitio/data/
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _sitio
+
+      - id: desplegar
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

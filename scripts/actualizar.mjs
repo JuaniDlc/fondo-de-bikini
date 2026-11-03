@@ -1,11 +1,13 @@
 // Lo corre el workflow cada hora: consulta Open-Meteo, el aeropuerto y El Niño, calcula
-// la probabilidad y escribe data/actual.json, data/historial.json y data/nino.json.
+// la probabilidad y escribe data/actual.json, data/historial.json (7 días, para comparar con la
+// lluvia real), data/historial-reciente.json (lo que dibuja la página) y data/nino.json.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { consultarOpenMeteo, procesarRespuesta, sumarHoras } from '../assets/openmeteo.js';
 import { conservarResumen, consultarAeropuerto, consultarNino } from './fuentes.mjs';
 
 const DIAS_HISTORIAL = 7;
+const HORAS_RECIENTE = 25; // la gráfica muestra menos de 24 horas pasadas
 const SEMANAS_NINO = 12;
 const carpeta = new URL('../data/', import.meta.url);
 
@@ -77,6 +79,12 @@ if (aeropuerto) {
 await writeFile(
   new URL('historial.json', carpeta),
   `[\n${filas.map((f) => `  ${JSON.stringify(f)}`).join(',\n')}\n]\n`,
+);
+
+const recienteDesde = sumarHoras(actual.hora, -HORAS_RECIENTE);
+await writeFile(
+  new URL('historial-reciente.json', carpeta),
+  `${JSON.stringify(filas.filter((f) => f.hora > recienteDesde).map(({ hora, probabilidad }) => ({ hora, probabilidad })))}\n`,
 );
 
 console.log(

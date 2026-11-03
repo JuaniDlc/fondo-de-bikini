@@ -16,8 +16,16 @@ jobs:
   actualizar:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      guardado: ${{ steps.guardar.outputs.guardado }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Datos (rama datos, en data/)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: datos
+          path: data
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
@@ -37,15 +45,26 @@ jobs:
         run: node scripts/avisar.mjs
 
       - name: Commit si hay cambios
+        id: guardar
+        working-directory: data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/
+          git add -A
           if git diff --cached --quiet; then
             echo "Sin cambios"
             exit 0
           fi
           git commit -m "Lectura $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
           # Si otro workflow guardó los mismos archivos, gana esta versión (la más reciente).
-          for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; git rebase --abort 2>/dev/null; sleep 5; done
+          for i in 1 2 3; do git pull --rebase -X theirs && git push && { echo "guardado=si" >> "$GITHUB_OUTPUT"; exit 0; }; git rebase --abort 2>/dev/null; sleep 5; done
           exit 1
+
+  publicar:
+    needs: actualizar
+    if: needs.actualizar.outputs.guardado == 'si'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/publicar.yml
