@@ -17,6 +17,7 @@ Cada prueba de una mejora del modelo se anota aquí, haya funcionado o no, para 
 
 | Fecha | Mejora | Resultado | Estado | Commit | Detalle |
 |---|---|---|---|---|---|
+| 2026-11-03 | Avance de los rayos y llegada de la nube fría, en 1 a 3 horas | De −0,33 a +0,61 %; no cumple la regla en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-avance-de-los-rayos-y-nube-fría) |
 | 2026-11-02 | Dos modelos, con y sin tormenta eléctrica, y un tercero que decide o pesa | Peor que un solo modelo con las mismas variables en todos los pronósticos: de −0,5 a −3,2 %; tomar el porcentaje mayor, de −16 a −65 %. No cumple en ninguno | No subida | solo la prueba, sin commit | [abajo](#2026-11-02-dos-modelos-con-y-sin-tormenta) |
 | 2026-11-02 | Nubes bajas de GOES (canales 3, 7, 13 y 15) | Solas cumplen la regla a 2 h (+2,12 %) y 3 h (+1,58 %); con señales y tibias, +3,76 % y +2,82 %. En las demás, no. En inicios sin rayos, cambia poco | En producción a 2 y 3 h | `8d39711` | [abajo](#2026-11-02-nubes-bajas-de-goes) |
 | 2026-11-02 | Señales del reporte del aeropuerto + nubes tibias (canal 13) | Hora en curso +2,79 %, cumple la regla; de 2 a 6 h y próximas 6 h, no. En inicios sin rayos, cambia poco | En producción en la hora en curso y a 2 y 3 h | `8d39711` | [abajo](#2026-11-02-señales-del-aeropuerto-y-nubes-tibias) |
@@ -52,6 +53,42 @@ Ideas sin probar, de [observaciones.md](observaciones.md):
 - Forzar que los rayos cercanos solo puedan subir la probabilidad. El 1 de noviembre a las 18:10, más rayos la bajaron de 62 a 50 %.
 - Suavizar las variables de rayos de 20 minutos. El mismo día, a las 16:10, un rayo que salió de la ventana bajó la hora de 49 a 21 %.
 - Un objetivo aparte para lluvia fuerte: el modelo dice si llueve, no cuánto.
+
+## 2026-11-03: avance de los rayos y nube fría
+
+**Pregunta:** ¿mejora el modelo si ve cómo evolucionó la tormenta en las últimas 1, 2 y 3 horas?
+
+**Por qué:** la madrugada del 3 de noviembre, los rayos estuvieron horas a unos 45 km y el modelo subió tarde ([observaciones.md](observaciones.md)).
+
+**Regla, fijada antes de ver resultados:** mejora de al menos 0,5 %, intervalo de 99 % sin el cero, mejora en al menos 6 de 8 trimestres y mejora en las horas secas con el rayo más cercano a 30-60 km. La última condición se agregó porque la idea salió de un solo caso.
+
+**Variables agregadas:**
+
+- **Rayos:** cambio de la cercanía del rayo más cercano, cercanía máxima en 3 horas y cambio de la cantidad de rayos a menos de 60 km.
+- **Nube fría:** cambio de la temperatura sobre el centro y del área fría a 30, 60 y 100 km.
+
+| Pronóstico | Rayos | Nube fría | Ambas | Mejor intervalo de 99 % | ¿Cumple? |
+|---|---|---|---|---|---|
+| Hora en curso | −0,20 % | +0,03 % | −0,18 % | [−0,62; +0,70] | no |
+| 2 h | +0,35 % | −0,03 % | +0,04 % | [−0,40; +1,17] | no |
+| 3 h | +0,13 % | +0,09 % | −0,03 % | [−0,78; +1,16] | no |
+| 4 h | +0,21 % | −0,33 % | −0,10 % | [−0,64; +1,09] | no |
+| 5 h | +0,06 % | +0,59 % | +0,61 % | [−0,93; +2,20] | no |
+
+El intervalo es el de la variante de mayor mejora en cada pronóstico.
+
+**Lectura:**
+
+1. **No se adopta.** Ninguna variante cumple la regla, y los intervalos incluyen el cero en todas.
+2. **El avance de los rayos no ayuda justo donde se buscaba.** En la franja de 30-60 km empeora en todas las anticipaciones, de −0,34 a −1,19 %. Coincide con que acercarse no subió la frecuencia de lluvia.
+3. **Lo único a volver a mirar:** la nube fría a 5 h, +0,59 %, 7 de 8 trimestres y +3,07 % en la franja. Su intervalo incluye el cero y es 1 de 15 comparaciones, así que puede ser casualidad.
+4. **Esa noche fue un caso bajo para su grupo.** En la franja, con 3 h de anticipación, la probabilidad típica cuando sí llovió era 37 %; esa noche marcó de 8 a 13 % a 3-4 h. Estos cambios no explican esa diferencia, y faltan datos de otros casos para saber por qué.
+
+**Límites:** no prueba la dirección de la tormenta, porque el historial de rayos no la guarda. Los datos del modelo llegan al 27 de octubre, así que la madrugada del 3 de noviembre no entra en la prueba.
+
+**Cuándo volver a mirarlo:** la nube fría a 5 h, al terminar la temporada lluviosa de 2027, con horas que no se usaron aquí.
+
+**Archivos:** [movimiento.md](movimiento.md) y `movimiento.py`.
 
 ## 2026-11-02: dos modelos, con y sin tormenta
 
