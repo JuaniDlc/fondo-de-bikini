@@ -38,6 +38,13 @@ try {
     if (r.status() >= 400 && r.url().startsWith(url)) faltantes.push(r.url().replace(url, ''));
   });
   await pagina.route(/open-meteo\.com/, (ruta) => ruta.abort());
+  // Por lugar con un número imposible: el aeropuerto debe mostrar el de «Próximas horas», no este.
+  const guardada = JSON.parse(await readFile(join(RAIZ, 'data/actual.json'), 'utf8'));
+  const horas = [guardada.horaLluvia, ...guardada.proyeccion.map((f) => f.hora)].slice(0, 6)
+    .map((hora) => ({ hora, probabilidad: 77 }));
+  await pagina.route(/data\/lugares\.json/, (ruta) => ruta.fulfill({
+    json: { generado: new Date().toISOString(), lugares: [{ nombre: 'Aeropuerto', horas }, { nombre: 'Otro', horas }] },
+  }));
   await pagina.goto(url);
   await pagina.waitForFunction(() => /\d %/.test(document.getElementById('prob').textContent));
   await pagina.waitForFunction(() => document.getElementById('estado').textContent !== 'Actualizando con el clima de este momento…');
@@ -48,7 +55,8 @@ try {
     ahora: [...document.querySelectorAll('#grafica text')].some((t) => t.textContent === 'Ahora'),
     desbordada: document.documentElement.scrollWidth > window.innerWidth,
     error: document.getElementById('estado').classList.contains('error'),
-    puntosPasados: document.getElementById('grafica').innerHTML.length,
+    proximas: [...document.querySelectorAll('#horas-filas tr')].map((f) => f.querySelector('b').textContent),
+    lugares: [...document.querySelectorAll('#lugares-filas tr')].map((f) => [...f.querySelectorAll('b')].map((b) => b.textContent)),
   }));
   assert.deepEqual(errores, [], 'errores o bloqueos de la CSP');
   assert.deepEqual(faltantes, [], 'archivos que la página no encontró');
@@ -56,6 +64,8 @@ try {
   assert.ok(vista.grafica >= 1 && vista.ahora, 'la gráfica no se dibujó');
   assert.equal(vista.desbordada, false, 'la página se desborda a lo ancho en un celular');
   assert.equal(vista.error, true, 'sin el servicio del clima, la página debe avisarlo');
+  assert.deepEqual(vista.lugares.map((f) => f[0]), vista.proximas, 'dos números distintos para el aeropuerto');
+  assert.ok(vista.lugares.length && vista.lugares.every((f) => f[1] === '77 %'), 'los demás lugares deben seguir igual');
   console.log(`La página funciona: ${vista.barras.length} barras, gráfica dibujada, sin errores.`);
 } finally {
   await navegador.close();

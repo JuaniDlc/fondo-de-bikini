@@ -203,14 +203,18 @@ function dibujarLugares() {
   $('lugares').hidden = lugares.length < 2 || !horas.length;
   if ($('lugares').hidden) return;
   const h = (local) => Number(local.slice(11, 13));
+  // El aeropuerto con el mismo número de «Próximas horas», que es más reciente; los demás, del workflow.
+  const propias = new Map(proximasHoras().map((f) => [f.hora, Math.round(f.probabilidad)]));
+  const valor = (l, hora) => (l.nombre === 'Aeropuerto' ? propias.get(hora) : undefined)
+    ?? l.horas.find((x) => x.hora === hora)?.probabilidad;
   const celda = (p) => (p === undefined ? '<td>—</td>'
     : `<td><b>${p} %</b><span class="barra hora"><span data-ancho="${p}"></span></span></td>`);
   $('lugares-cabecera').innerHTML = '<th scope="col">Hora</th>'
     + lugares.map((l) => `<th scope="col">${escapar(l.nombre)}</th>`).join('');
   $('lugares-filas').innerHTML = horas.map((hora) => `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
-    + lugares.map((l) => celda(l.horas.find((x) => x.hora === hora)?.probabilidad)).join('') + '</tr>').join('');
+    + lugares.map((l) => celda(valor(l, hora))).join('') + '</tr>').join('');
   ponerAnchos($('lugares-filas'));
-  $('lugares-nota').textContent = `Con los rayos y las nubes de tormenta medidos desde cada lugar. Calculado a las ${fmtHora.format(new Date(datos.generado))}.`;
+  $('lugares-nota').textContent = `Con los rayos y las nubes de tormenta medidos desde cada lugar. El aeropuerto es el mismo de «Próximas horas»; los demás se calcularon a las ${fmtHora.format(new Date(datos.generado))}.`;
 }
 
 // ---------- gráfica (SVG a mano) ----------
@@ -472,11 +476,13 @@ async function iniciar() {
   const espera = leerEspera();
   if (espera > Date.now()) iniciarEspera(espera);
 
-  const [actual, historial, nino] = await Promise.allSettled([
+  const [actual, historial, nino, lugares] = await Promise.allSettled([
     leerJSON('data/actual.json'),
     leerJSON('data/historial-reciente.json'),
     leerJSON('data/nino.json'),
+    leerJSON('data/lugares.json'),
   ]);
+  if (lugares.status === 'fulfilled') estado.lugares = lugares.value;
   if (historial.status === 'fulfilled' && Array.isArray(historial.value)) estado.historial = historial.value;
   if (nino.status === 'fulfilled' && Array.isArray(nino.value)) estado.nino = nino.value;
 
