@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light;
+  color-scheme: only light;
   --fondo: #f9f9f7;
   --superficie: #fcfcfb;
   --borde: rgba(11, 11, 11, 0.1);
@@ -16,31 +16,10 @@
   --atencion-fondo: #fdf3dc;
   --tranquilo: #2e6b2e;
   --tranquilo-fondo: #e8f3e4;
+  --barra-baja: #9cc3e8;
+  --barra-alta: #0f4a9e;
   --boton: #2a78d6;
   --boton-texto: #ffffff;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --fondo: #0d0d0d;
-    --superficie: #1a1a19;
-    --borde: rgba(255, 255, 255, 0.1);
-    --texto: #ffffff;
-    --texto-2: #c3c2b7;
-    --tenue: #898781;
-    --rejilla: #2c2c2a;
-    --eje: #383835;
-    --serie: #3987e5;
-    --tendencia: #d95926;
-    --critico: #e66767;
-    --aviso-fondo: #3a1f1f;
-    --atencion: #e6b450;
-    --atencion-fondo: #362a10;
-    --tranquilo: #8fce8f;
-    --tranquilo-fondo: #1c2e1c;
-    --boton: #3987e5;
-  }
 }
 
 [hidden] { display: none !important; }
@@ -220,3 +199,47 @@ footer a { color: inherit; }
 .radar circle.rayo { stroke: var(--superficie); fill-opacity: 0.8; }
 .radar circle.rayo.nivel-2 { fill: var(--critico); }
 .radar circle.rayo.nivel-1, .radar circle.rayo.nivel-0 { fill: var(--atencion); }
+.radar .pulso {
+  fill: none;
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulso-rayo 2.7s ease-out infinite;
+}
+.radar .pulso.nivel-2 { stroke: var(--critico); }
+.radar .pulso.nivel-1 { stroke: var(--atencion); }
+.radar .pulso-1 { animation-delay: 0.9s; }
+.radar .pulso-2 { animation-delay: 1.8s; }
+@keyframes pulso-rayo {
+  from { transform: scale(0.6); opacity: 0.8; }
+  to { transform: scale(3.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .radar .pulso { animation: none; }
+}
+
+/* Color según el riesgo de lluvia, en un solo tono: el rojo queda para la tormenta eléctrica.
+   --p es la probabilidad (0 a 100): el color sube de a poco, así 39 % y 40 % casi no se distinguen.
+   La página siempre se ve en modo claro. */
+.principal {
+  --mezcla: color-mix(in srgb, #eef5fa, #5f9fe3 calc(var(--p, 0) * 1%));
+  background: linear-gradient(160deg, color-mix(in srgb, #eef5fa, var(--mezcla) 45%), var(--mezcla));
+  border-color: rgba(11, 11, 11, 0.1);
+  color: #0b0b0b;
+}
+.principal .etiqueta, .principal .proximas, .principal .hora-lectura, .principal .estado { color: #0b0b0b; }
+.principal .estado.error { color: #5e0c0c; }
+.principal button {
+  background: color-mix(in srgb, #2a78d6, #0b3d86 calc(var(--p, 0) * 1%));
+  color: #ffffff;
+}
+.barra > span, .barra.hora > span {
+  background: linear-gradient(90deg, var(--barra-baja), color-mix(in srgb, var(--barra-baja), var(--barra-alta) calc(var(--p, 0) * 1%)));
+}
+/* Navegadores viejos, sin color-mix: un color fijo para que el texto se siga leyendo. */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  .principal { background: #d3e6f6; }
+  .principal button { background: #2a78d6; }
+  .barra > span, .barra.hora > span { background: var(--serie); }
+}

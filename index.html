@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="only light">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.open-meteo.com https://ensemble-api.open-meteo.com; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="description" content="Probabilidad de lluvia en Guayaquil, hora a hora, con su tendencia.">
@@ -17,7 +17,7 @@
       <h1>Lluvia en Fondo de Bikini</h1>
     </header>
 
-    <section class="principal" aria-live="polite">
+    <section class="principal" id="tarjeta-principal" aria-live="polite">
       <p class="etiqueta" id="etiqueta">Probabilidad de lluvia</p>
       <p class="prob" id="prob">—</p>
       <p class="frase" id="frase">Cargando…</p>

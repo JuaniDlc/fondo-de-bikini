@@ -36,6 +36,14 @@ test('si el archivo aún no trae puntos, la frase igual funciona', () => {
   assert.equal(resumenRayos(base, ahora).titulo, 'A 12 km al noreste');
 });
 
+test('solo las zonas más cercanas pulsan, y sin tormenta nada se mueve', () => {
+  const puntos = Array.from({ length: 9 }, (_, i) => [i + 1, 40, 2]);
+  const dibujar = (nivel) => svgRadar({ radioKm: 25, anillos: [25], lugares: [], puntos, nivel });
+  assert.equal((dibujar(2).match(/class="pulso/g) ?? []).length, 6);
+  assert.equal((dibujar(2).match(/class="rayo/g) ?? []).length, 9);
+  assert.equal((dibujar(0).match(/class="pulso/g) ?? []).length, 0);
+});
+
 test('un punto lejos de todo no se atribuye a ningún lugar', () => {
   assert.equal(cercaDe(200, 58), null);
   assert.equal(cercaDe(67, 6), 'Durán');

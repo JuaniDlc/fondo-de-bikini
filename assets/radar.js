@@ -68,6 +68,7 @@ const ANCHO = 440;
 const MEDIO = ANCHO / 2;
 const R_MAX = 195;
 const NUM = (x) => x.toFixed(1);
+const MAXIMO_PULSOS = 6;
 
 /** Radar en SVG: el centro de Guayaquil, sus anillos, las poblaciones y los rayos. */
 export function svgRadar({ radioKm, anillos, lugares, puntos, nivel }) {
@@ -90,10 +91,15 @@ export function svgRadar({ radioKm, anillos, lugares, puntos, nivel }) {
       + `<text class="pueblo" x="${NUM(x + (lado === 'start' ? 6 : -6))}" y="${NUM(y + 4 + subir)}" text-anchor="${lado}">${nombre}</text>`);
   }
   // Los rayos después de los nombres, para que no queden tapados; son translúcidos para poder leerlos.
-  for (const [km, rumbo, n] of puntos.filter((p) => p[0] <= radioKm)) {
+  // Con tormenta, las zonas más cercanas lanzan una onda (los puntos vienen del más cercano al más lejano).
+  puntos.filter((p) => p[0] <= radioKm).forEach(([km, rumbo, n], i) => {
     const [x, y] = pos(rumbo, km);
-    partes.push(`<circle class="rayo nivel-${nivel}" cx="${NUM(x)}" cy="${NUM(y)}" r="${NUM(Math.min(3 + Math.sqrt(n), 8))}"/>`);
-  }
+    const radio = NUM(Math.min(3 + Math.sqrt(n), 8));
+    if (nivel && i < MAXIMO_PULSOS) {
+      partes.push(`<circle class="pulso pulso-${i % 3} nivel-${nivel}" cx="${NUM(x)}" cy="${NUM(y)}" r="${radio}"/>`);
+    }
+    partes.push(`<circle class="rayo nivel-${nivel}" cx="${NUM(x)}" cy="${NUM(y)}" r="${radio}"/>`);
+  });
   partes.push(`<circle class="centro" cx="${MEDIO}" cy="${MEDIO}" r="4"/>`
     + `<text class="centro" x="${MEDIO}" y="${MEDIO + 16}" text-anchor="middle">Guayaquil</text>`);
   const hay = puntos.filter((p) => p[0] <= radioKm).length;

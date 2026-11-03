@@ -43,7 +43,10 @@ const fmtDiaCorto = new Intl.DateTimeFormat('es-EC', { timeZone: ZONA, weekday: 
 
 /** La CSP no deja usar estilos en línea en el HTML: el ancho de las barras se pone desde aquí. */
 function ponerAnchos(contenedor) {
-  for (const b of contenedor.querySelectorAll('[data-ancho]')) b.style.width = `${b.dataset.ancho}%`;
+  for (const b of contenedor.querySelectorAll('[data-ancho]')) {
+    b.style.width = `${b.dataset.ancho}%`;
+    b.style.setProperty('--p', b.dataset.ancho);
+  }
 }
 
 function frase(pct) {
@@ -115,6 +118,8 @@ function dibujar() {
   const fin = actual.horaLluvia ?? actual.hora;
   $('etiqueta').textContent = `Lluvia de ${horaCorta(inicio)} a ${horaCorta(fin)}`;
   $('prob').textContent = `${pHora} %`;
+  // El color se calcula en la hoja de estilos: sube de a poco con la probabilidad, sin saltos.
+  $('tarjeta-principal').style.setProperty('--p', actual.lloviendo ? 100 : pHora);
   $('frase').textContent = actual.lloviendo ? 'Está lloviendo en el aeropuerto' : frase(pHora);
   $('proximas').hidden = true; // el dato de 6 h solo se usa para los avisos
   const aero = actual.aeropuerto;

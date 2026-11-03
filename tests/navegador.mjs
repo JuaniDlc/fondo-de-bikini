@@ -27,7 +27,8 @@ const url = `http://127.0.0.1:${servidor.address().port}/`;
 
 const navegador = await chromium.launch({ channel: process.env.NAVEGADOR ?? 'chrome' });
 try {
-  const contexto = await navegador.newContext({ viewport: { width: 375, height: 812 } });
+  // En modo oscuro a propósito: la página debe verse clara igual.
+  const contexto = await navegador.newContext({ viewport: { width: 375, height: 812 }, colorScheme: 'dark' });
   const pagina = await contexto.newPage();
   const errores = [];
   const faltantes = [];
@@ -62,6 +63,25 @@ try {
     ahora: [...document.querySelectorAll('#grafica text')].some((t) => t.textContent === 'Ahora'),
     rayos: [document.querySelectorAll('#radar-region circle.rayo').length, document.querySelectorAll('#radar-ciudad circle.rayo').length],
     tarjeta: document.getElementById('rayos-nivel').textContent,
+    fondoPagina: getComputedStyle(document.body).backgroundColor,
+    fondoTarjeta: getComputedStyle(document.getElementById('horas')).backgroundColor,
+    fondoPrincipal: getComputedStyle(document.getElementById('tarjeta-principal')).backgroundImage,
+    barrasRiesgo: [...document.querySelectorAll('#horas-filas .barra span')].map((b) => getComputedStyle(b).backgroundImage),
+    // Dos barras casi iguales: el color no debe saltar entre 39 % y 40 %.
+    saltoColor: (() => {
+      const color = (p) => {
+        const b = document.createElement('span');
+        b.className = 'barra';
+        b.innerHTML = '<span></span>';
+        document.body.append(b);
+        b.firstChild.style.setProperty('--p', p);
+        const texto = getComputedStyle(b.firstChild).backgroundImage;
+        b.remove();
+        return texto.match(/[\d.]+/g).map(Number);
+      };
+      const [a, c] = [color(39), color(40)];
+      return Math.max(...a.map((x, i) => Math.abs(x - c[i])));
+    })(),
     titulo: document.getElementById('rayos-titulo').textContent,
     consejos: /lugar cerrado|resguárd|lugar seguro/i.test(document.querySelector('main').textContent),
     arriba: document.querySelector('.principal').nextElementSibling.id,
@@ -75,7 +95,12 @@ try {
   assert.ok(vista.barras.length >= 1 && vista.barras.every((b) => b.endsWith('%')), `barras: ${vista.barras}`);
   assert.ok(vista.grafica >= 1 && vista.ahora, 'la gráfica no se dibujó');
   assert.deepEqual(vista.rayos, [2, 1], 'rayos en cada radar');
+  assert.equal(vista.fondoPagina, 'rgb(249, 249, 247)', 'la página debe verse en modo claro');
+  assert.equal(vista.fondoTarjeta, 'rgb(252, 252, 251)', 'las tarjetas deben verse en modo claro');
   assert.equal(vista.tarjeta, 'Hay tormenta eléctrica');
+  assert.match(vista.fondoPrincipal, /linear-gradient/);
+  assert.ok(vista.barrasRiesgo.every((f) => /linear-gradient/.test(f)), 'barra sin degradado');
+  assert.ok(vista.saltoColor < 0.05, `el color salta entre 39 % y 40 %: ${vista.saltoColor}`);
   assert.match(vista.titulo, /^A 12 km al noreste/);
   assert.equal(vista.consejos, false, 'la sección de rayos no da consejos');
   assert.equal(vista.arriba, 'aviso', 'no debe haber aviso de rayos arriba');
