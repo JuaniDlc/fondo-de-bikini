@@ -15,7 +15,6 @@ const UMBRAL_PRECAUCION = 70;
 const CLAVE_ESPERA = 'lluvia-gye-espera-hasta';
 
 const $ = (id) => document.getElementById(id);
-const debug = new URLSearchParams(location.search).get('debug') === '1';
 
 const estado = {
   actual: null,      // lectura de ahora, con probabilidad y detalle
@@ -165,7 +164,6 @@ function dibujar() {
     + ` (clima de las ${fmtHora.format(clima)})`;
 
   dibujarGrafica(real, serieProyeccion(), tend);
-  if (debug) dibujarDebug();
 }
 
 /**
@@ -364,51 +362,6 @@ function activarHover(cont, puntos, x, y, ancho) {
   svg.addEventListener('pointermove', mostrar);
   svg.addEventListener('pointerdown', mostrar);
   svg.addEventListener('pointerleave', ocultar);
-}
-
-// ---------- modo depuración (?debug=1) ----------
-
-function dibujarDebug() {
-  const { actual } = estado;
-  const d = actual.detalle;
-  const caja = $('debug');
-  caja.hidden = false;
-  if (!d) { caja.textContent = 'Sin detalle del modelo para esta lectura.'; return; }
-  const f = (v, dec = 3) => (v === null || v === undefined ? '—' : num(v, dec));
-  const m = actual.modelos;
-  const fuentes = { aeropuerto: 'lluvia observada en el aeropuerto', corregido: 'modelo corregido', ensamble: 'ensambles ECMWF + GFS', heuristica: 'heurística', ninguna: '—' };
-  const filas = [
-    ['Fuente: esta hora / 6 h', `${fuentes[actual.fuente]} / ${fuentes[actual.proximas6hFuente] ?? '—'}`],
-    ['Usa el reporte del aeropuerto', actual.usaAeropuerto ? 'sí' : 'no'],
-    ['Usa los rayos del satélite (esta hora / 6 h)', `${actual.horaUsaRayos ? 'sí' : 'no'} / ${actual.usaRayos ? 'sí' : 'no'}`],
-    ['Usa el infrarrojo (esta hora)', actual.horaUsaIR ? 'sí' : 'no'],
-    ['Usa el vapor de agua (esta hora / 6 h)', `${actual.horaUsaVapor ? 'sí' : 'no'} / ${actual.usaVapor ? 'sí' : 'no'}`],
-    ['Usa las señales del aeropuerto y las nubes tibias (esta hora)', actual.horaUsaSenales ? 'sí' : 'no'],
-    ['Vapor de agua: canal 8 / canal 10 a 60 km (K)', actual.ir?.vapor8_60
-      ? `${f(actual.ir.vapor8_60, 0)} / ${f(actual.ir.vapor10_60, 0)}` : '—'],
-    ['Infrarrojo: nube más fría a 30 km / crecimiento en 30 min (K)', actual.ir
-      ? `${f(270 - actual.ir.ir_frio_30, 0)} / ${f(actual.ir.ir_crece_30, 1)}` : '—'],
-    ['Rayos: más cercano en 20 min / acercándose', actual.rayos
-      ? `${actual.rayos.cercania_20m > 0 ? `${f(-30 * Math.log(actual.rayos.cercania_20m), 0)} km` : 'ninguno'} / ${f(actual.rayos.acercamiento, 2)}`
-      : '—'],
-    ['Corregido: esta hora / 6 h (%)', `${f(actual.corregido, 1)} / ${actual.proximas6hFuente === 'corregido' ? f(actual.proximas6h, 1) : '—'}`],
-    ['Ensambles sin corregir: esta hora / 6 h (%)', `${f(actual.ensamble, 1)} / ${f(actual.ensamble6h, 1)}`],
-    ['ECMWF ahora / 6 h (%)', m ? `${f(m.ahora.ecmwf, 0)} / ${f(m.proximas6h.ecmwf, 0)}` : '—'],
-    ['GFS ahora / 6 h (%)', m ? `${f(m.ahora.gfs, 0)} / ${f(m.proximas6h.gfs, 0)}` : '—'],
-    ['El Niño 1+2 (anomalía °C)', f(estado.nino?.at(-1)?.nino12, 1)],
-    ['Heurística (%)', f(actual.heuristica, 1)],
-    ['Probabilidad base del mes', f(d.base, 2)],
-    ['Temporada lluviosa', d.lluviosa ? 'sí' : 'no'],
-    ['Presión hace 3 h (hPa)', f(estado.actual.presion3h, 1)],
-    ['Punto de rocío Td (°C)', f(d.td, 2)],
-    ['Margen T − Td (°C)', f(d.sp, 2)],
-    ['Cambio esperado por marea (hPa)', f(d.cambioEsperado)],
-    ['Anomalía de presión (hPa)', f(d.anomalia)],
-    ...Object.entries(d.factores).map(([k, v]) => [`Factor ${k}`, f(v)]),
-    ['z (logit)', f(d.z)],
-  ];
-  caja.innerHTML = '<h2>Desglose de los modelos</h2><table>' +
-    filas.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('') + '</table>';
 }
 
 // ---------- botón ----------

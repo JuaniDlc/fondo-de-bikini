@@ -149,10 +149,6 @@ button:focus-visible { outline: 3px solid var(--tendencia); outline-offset: 2px;
 
 .tendencia { margin: 0.5rem 0 0; font-weight: 500; }
 
-.debug { font-size: 0.85rem; overflow-x: auto; }
-.debug table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-.debug td { padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--rejilla); }
-.debug td:last-child { text-align: right; }
 
 .horas table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .horas th, .horas td { padding: 0.4rem 0.3rem; border-bottom: 1px solid var(--rejilla); text-align: left; font-weight: 500; }
