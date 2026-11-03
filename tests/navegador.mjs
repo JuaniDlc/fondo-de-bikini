@@ -45,6 +45,13 @@ try {
   await pagina.route(/data\/lugares\.json/, (ruta) => ruta.fulfill({
     json: { generado: new Date().toISOString(), lugares: [{ nombre: 'Aeropuerto', horas }, { nombre: 'Otro', horas }] },
   }));
+  // Rayos de ejemplo, para que las tarjetas no dependan del clima de hoy.
+  await pagina.route(/data\/rayos\.json/, (ruta) => ruta.fulfill({
+    json: {
+      generado: new Date().toISOString(), rayos: 12, mas_cercano_km: 12, rumbo: 'noreste',
+      puntos: [[12, 60, 5], [40, 300, 7]], modelo: null,
+    },
+  }));
   await pagina.goto(url);
   await pagina.waitForFunction(() => /\d %/.test(document.getElementById('prob').textContent));
   await pagina.waitForFunction(() => document.getElementById('estado').textContent !== 'Actualizando con el clima de este momento…');
@@ -53,6 +60,11 @@ try {
     barras: [...document.querySelectorAll('#horas-filas .barra span')].map((b) => b.style.width),
     grafica: document.querySelectorAll('#grafica svg path, #grafica svg polyline').length,
     ahora: [...document.querySelectorAll('#grafica text')].some((t) => t.textContent === 'Ahora'),
+    rayos: [document.querySelectorAll('#radar-region circle.rayo').length, document.querySelectorAll('#radar-ciudad circle.rayo').length],
+    tarjeta: document.getElementById('rayos-nivel').textContent,
+    titulo: document.getElementById('rayos-titulo').textContent,
+    consejos: /lugar cerrado|resguárd|lugar seguro/i.test(document.querySelector('main').textContent),
+    arriba: document.querySelector('.principal').nextElementSibling.id,
     desbordada: document.documentElement.scrollWidth > window.innerWidth,
     error: document.getElementById('estado').classList.contains('error'),
     proximas: [...document.querySelectorAll('#horas-filas tr')].map((f) => f.querySelector('b').textContent),
@@ -62,6 +74,11 @@ try {
   assert.deepEqual(faltantes, [], 'archivos que la página no encontró');
   assert.ok(vista.barras.length >= 1 && vista.barras.every((b) => b.endsWith('%')), `barras: ${vista.barras}`);
   assert.ok(vista.grafica >= 1 && vista.ahora, 'la gráfica no se dibujó');
+  assert.deepEqual(vista.rayos, [2, 1], 'rayos en cada radar');
+  assert.equal(vista.tarjeta, 'Hay tormenta eléctrica');
+  assert.match(vista.titulo, /^A 12 km al noreste/);
+  assert.equal(vista.consejos, false, 'la sección de rayos no da consejos');
+  assert.equal(vista.arriba, 'aviso', 'no debe haber aviso de rayos arriba');
   assert.equal(vista.desbordada, false, 'la página se desborda a lo ancho en un celular');
   assert.equal(vista.error, true, 'sin el servicio del clima, la página debe avisarlo');
   assert.deepEqual(vista.lugares.map((f) => f[0]), vista.proximas, 'dos números distintos para el aeropuerto');

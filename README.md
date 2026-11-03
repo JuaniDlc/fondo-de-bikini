@@ -34,6 +34,10 @@ Los datos están en la rama `datos`, no en `main`, para que `main` solo tenga ca
 
 Si cambia el código, «Publicar página» corre antes `node --test` y `tests/navegador.mjs`, que abre la página en Chrome. «Vigía de datos» revisa cada hora que los datos publicados estén al día; si no, falla y GitHub avisa por correo.
 
+## Tarjetas de rayos
+
+La página muestra los rayos de los últimos 10 minutos en dos radares, hasta 60 km y hasta 25 km (`assets/radar.js`, con los datos de `data/rayos.json`). Se miden desde el centro de Guayaquil, con los mismos niveles que los avisos. Los puntos son celdas de unos 2 km y las poblaciones son solo referencias públicas, nunca los lugares del secreto `LUGARES`.
+
 ## Publicar en GitHub
 
 1. Crea un repositorio **público** en GitHub (por ejemplo `fondo-de-bikini`) y sube este código a la rama `main`.

@@ -11,8 +11,11 @@
 export const PAGINA = 'https://juanidlc.github.io/fondo-de-bikini/';
 export const LLUVIA_ACTIVA = 70;
 export const LLUVIA_DESACTIVA = 50;
+import { RAYOS_MINIMOS, nivelRayos } from '../assets/radar.js';
+
+export { RAYOS_MINIMOS };
+
 const HORAS_LLUVIA = 6;
-export const RAYOS_MINIMOS = 3; // menos que esto puede ser ruido del sensor
 export const ESPERA_RAYOS_MIN = 60;
 export const REPETIR_RAYOS_MIN = 120; // tormenta que sigue activa: se recuerda cada 2 horas
 export const SIN_RAYOS_MIN = 30; // sin rayos este tiempo = la tormenta se alejó
@@ -20,10 +23,6 @@ const VIGENCIA_ACTUAL_MIN = 120;
 const VIGENCIA_RAYOS_MIN = 20;
 
 const minutosDesde = (iso, ahora) => (ahora - Date.parse(iso)) / 60000;
-const nivelRayos = (r) => {
-  if (!r || r.rayos < RAYOS_MINIMOS) return 0;
-  return r.mas_cercano_km !== null && r.mas_cercano_km <= 25 ? 2 : 1;
-};
 
 // Un dato faltante no cierra el aviso de lluvia: sin el aeropuerto el modelo no sabe si ya llueve,
 // y una lectura guardada (porque falló Open-Meteo) es de antes. Se espera a la siguiente completa.

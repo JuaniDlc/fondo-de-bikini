@@ -23,6 +23,11 @@
       <p class="frase" id="frase">Cargando…</p>
       <p class="proximas" id="proximas" hidden></p>
       <p class="proximas" id="aeropuerto" hidden></p>
+      <div class="lectura">
+        <p id="hora-lectura" class="hora-lectura">—</p>
+        <button type="button" id="actualizar">Actualizar ahora</button>
+        <p id="estado" class="estado" role="status"></p>
+      </div>
     </section>
 
     <div class="aviso" id="aviso" role="alert" hidden></div>
@@ -47,16 +52,26 @@
       <p class="nota" id="lugares-nota"></p>
     </section>
 
+    <section class="rayos" id="rayos" hidden>
+      <h2>Rayos: hasta 60 km</h2>
+      <p class="nivel" id="rayos-nivel"></p>
+      <p class="rayos-titulo" id="rayos-titulo"></p>
+      <div class="radar" id="radar-region"></div>
+      <p class="nota" id="rayos-nota"></p>
+    </section>
+
+    <section class="rayos" id="rayos-ciudad" hidden>
+      <h2>Rayos: hasta 25 km</h2>
+      <p class="nivel" id="ciudad-nivel"></p>
+      <p class="rayos-titulo" id="ciudad-titulo"></p>
+      <div class="radar" id="radar-ciudad"></div>
+      <p class="nota">Las ubicaciones son aproximadas: el satélite no da el punto exacto de cada rayo.</p>
+    </section>
+
     <section class="datos" aria-label="Condiciones actuales">
       <div class="dato"><span class="valor" id="temp">—</span><span class="nombre">Temperatura</span></div>
       <div class="dato"><span class="valor" id="hum">—</span><span class="nombre">Humedad</span></div>
       <div class="dato"><span class="valor" id="pres">—</span><span class="nombre">Presión</span></div>
-    </section>
-
-    <section class="lectura">
-      <p id="hora-lectura" class="hora-lectura">—</p>
-      <button type="button" id="actualizar">Actualizar ahora</button>
-      <p id="estado" class="estado" role="status"></p>
     </section>
 
     <section class="grafica">

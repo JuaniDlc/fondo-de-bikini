@@ -30,6 +30,8 @@ LAT, LON = -2.19, -79.89
 MINUTOS = 10
 RADIO_KM = 60
 CERCA_KM = 25
+CELDA_GRADOS = 0.02
+MAXIMO_PUNTOS = 150
 BUCKET = 'https://noaa-goes19.s3.amazonaws.com/'
 SALIDA = Path(__file__).resolve().parent.parent / 'data' / 'rayos.json'
 RUMBOS = ['norte', 'noreste', 'este', 'sureste', 'sur', 'suroeste', 'oeste', 'noroeste']
@@ -65,6 +67,17 @@ def archivos(desde: dt.datetime, hasta: dt.datetime) -> list[str]:
             if desde <= inicio < hasta:
                 claves.append(clave)
     return claves
+
+
+def puntos_por_celda(lat, lon):
+    """Rayos agrupados en celdas de unos 2 km, para el radar de la página: [km, rumbo, cuántos],
+    del más cercano al más lejano. No hace falta más detalle: el sensor tampoco lo tiene."""
+    if not len(lat):
+        return []
+    celdas, n = np.unique(np.round(np.column_stack([lat, lon]) / CELDA_GRADOS).astype(int), axis=0, return_counts=True)
+    d, r = distancia_y_rumbo(celdas[:, 0] * CELDA_GRADOS, celdas[:, 1] * CELDA_GRADOS)
+    orden = np.argsort(d)[:MAXIMO_PUNTOS]
+    return [[round(float(d[i]), 1), round(float(r[i]) % 360), int(n[i])] for i in orden]
 
 
 def distancia_y_rumbo(lat, lon, centro=(LAT, LON)):
@@ -193,13 +206,15 @@ def main():
 
     desde = ahora - dt.timedelta(minutes=MINUTOS)
     claves = archivos(desde, ahora)
-    distancias, rumbos = [], []
+    distancias, rumbos, lats, lons = [], [], [], []
     for clave in claves:
         lat, lon = leer_una_vez(clave)
         d, r = distancia_y_rumbo(lat, lon)
         dentro = d <= RADIO_KM
         distancias.extend(d[dentro].tolist())
         rumbos.extend(r[dentro].tolist())
+        lats.extend(np.asarray(lat)[dentro].tolist())
+        lons.extend(np.asarray(lon)[dentro].tolist())
 
     resultado = {
         'generado': ahora.strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -210,6 +225,7 @@ def main():
         'rayos_cerca': sum(d <= CERCA_KM for d in distancias),
         'mas_cercano_km': round(min(distancias), 1) if distancias else None,
         'rumbo': None,
+        'puntos': puntos_por_celda(np.array(lats), np.array(lons)),
     }
     if rumbos:
         # Rumbo promedio (circular) de los rayos, en palabras

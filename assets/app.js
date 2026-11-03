@@ -1,6 +1,7 @@
 // Pantalla, gráfica y botón «Actualizar ahora».
 
 import { tendenciaLineal } from './modelo.js';
+import { CERCA_KM, CIUDAD, REGION, resumenRayos, svgRadar } from './radar.js';
 import {
   ZONA, aFecha, consultarOpenMeteo, horasEntre, procesarRespuesta, sumarHoras,
 } from './openmeteo.js';
@@ -26,6 +27,7 @@ const estado = {
   nino: null,        // índices de El Niño guardados por el workflow
   aeropuerto: null,  // último reporte del aeropuerto resumido por el workflow
   rayos: null,       // rayos de la última hora (data/rayos.json, cada 10 minutos)
+  radar: null,       // ese mismo archivo completo, para las tarjetas de rayos
   ir: null,          // nubes de tormenta en la imagen infrarroja (data/infrarrojo.json, cada 10 minutos)
   lugares: null,     // pronóstico por lugar (data/lugares.json, del workflow cada 10 minutos)
 };
@@ -128,6 +130,7 @@ function dibujar() {
 
   dibujarHoras();
   dibujarLugares();
+  dibujarRayos();
 
   // Aviso sobre la hora más probable de la tabla
   const mayor = proximasHoras().reduce((a, b) => (b.probabilidad > a.probabilidad ? b : a), { probabilidad: pHora });
@@ -215,6 +218,27 @@ function dibujarLugares() {
     + lugares.map((l) => celda(valor(l, hora))).join('') + '</tr>').join('');
   ponerAnchos($('lugares-filas'));
   $('lugares-nota').textContent = `Con los rayos y las nubes de tormenta medidos desde cada lugar. El aeropuerto es el mismo de «Próximas horas»; los demás se calcularon a las ${fmtHora.format(new Date(datos.generado))}.`;
+}
+
+/** Tarjetas de rayos (hasta 60 y hasta 25 km). */
+function dibujarRayos() {
+  const r = resumenRayos(estado.radar);
+  $('rayos').hidden = !r;
+  $('rayos-ciudad').hidden = !r;
+  if (!r) return;
+  $('rayos-nivel').textContent = r.etiqueta;
+  $('rayos-nivel').className = `nivel nivel-${r.nivel}`;
+  $('rayos-titulo').textContent = r.titulo;
+  $('rayos-titulo').hidden = !r.titulo;
+  $('rayos-nota').textContent = `Satélite GOES, últimos 10 minutos, hace ${r.minutos} min. Medido desde el centro de Guayaquil.`;
+  $('radar-region').innerHTML = svgRadar({ radioKm: 60, anillos: [CERCA_KM, 60], lugares: REGION, puntos: r.puntos, nivel: r.nivel });
+  // Aquí solo cuentan los rayos de la zona: puede haber tormenta a 40 km y esta seguir tranquila.
+  const enZona = r.nivel === 2;
+  $('ciudad-nivel').textContent = enZona ? 'Hay tormenta eléctrica' : 'Sin tormenta eléctrica';
+  $('ciudad-nivel').className = `nivel nivel-${enZona ? 2 : 0}`;
+  $('ciudad-titulo').textContent = enZona ? r.titulo : '';
+  $('ciudad-titulo').hidden = !enZona;
+  $('radar-ciudad').innerHTML = svgRadar({ radioKm: CERCA_KM, anillos: [10, CERCA_KM], lugares: CIUDAD, puntos: r.puntos, nivel: r.nivel });
 }
 
 // ---------- gráfica (SVG a mano) ----------
@@ -415,7 +439,7 @@ async function actualizarAhora({ automatico = false } = {}) {
     // porque cambian (el aeropuerto cada hora, los rayos cada 10 minutos).
     const [respuesta, rayos, aeropuerto, lugares, ir] = await Promise.all([
       consultarOpenMeteo(),
-      leerJSON('data/rayos.json').then((r) => r.modelo ?? null, () => estado.rayos),
+      leerJSON('data/rayos.json').then((r) => { estado.radar = r; return r.modelo ?? null; }, () => estado.rayos),
       leerJSON('data/aeropuerto.json').catch(() => leerJSON('data/actual.json').then((a) => a.aeropuerto))
         .then((a) => a ?? estado.aeropuerto, () => estado.aeropuerto),
       leerJSON('data/lugares.json').catch(() => estado.lugares),
@@ -476,12 +500,14 @@ async function iniciar() {
   const espera = leerEspera();
   if (espera > Date.now()) iniciarEspera(espera);
 
-  const [actual, historial, nino, lugares] = await Promise.allSettled([
+  const [actual, historial, nino, lugares, radar] = await Promise.allSettled([
     leerJSON('data/actual.json'),
     leerJSON('data/historial-reciente.json'),
     leerJSON('data/nino.json'),
     leerJSON('data/lugares.json'),
+    leerJSON('data/rayos.json'),
   ]);
+  if (radar.status === 'fulfilled') estado.radar = radar.value;
   if (lugares.status === 'fulfilled') estado.lugares = lugares.value;
   if (historial.status === 'fulfilled' && Array.isArray(historial.value)) estado.historial = historial.value;
   if (nino.status === 'fulfilled' && Array.isArray(nino.value)) estado.nino = nino.value;
