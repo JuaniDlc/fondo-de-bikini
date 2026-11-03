@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-03T08:10:29.246Z",
+ "generado": "2026-11-03T08:20:27.204Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,23 +7,23 @@
    "horas": [
     {
      "hora": "2026-11-03T04:00",
-     "probabilidad": 96
+     "probabilidad": 97
     },
     {
      "hora": "2026-11-03T05:00",
-     "probabilidad": 90
+     "probabilidad": 94
     },
     {
      "hora": "2026-11-03T06:00",
-     "probabilidad": 68
+     "probabilidad": 76
     },
     {
      "hora": "2026-11-03T07:00",
-     "probabilidad": 22
+     "probabilidad": 26
     },
     {
      "hora": "2026-11-03T08:00",
-     "probabilidad": 16
+     "probabilidad": 15
     },
     {
      "hora": "2026-11-03T09:00",
@@ -41,23 +41,23 @@
     },
     {
      "hora": "2026-11-03T05:00",
-     "probabilidad": 88
+     "probabilidad": 90
     },
     {
      "hora": "2026-11-03T06:00",
-     "probabilidad": 60
+     "probabilidad": 63
     },
     {
      "hora": "2026-11-03T07:00",
-     "probabilidad": 23
+     "probabilidad": 25
     },
     {
      "hora": "2026-11-03T08:00",
-     "probabilidad": 18
+     "probabilidad": 16
     },
     {
      "hora": "2026-11-03T09:00",
-     "probabilidad": 8
+     "probabilidad": 6
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-03T04:00",
-     "probabilidad": 95
+     "probabilidad": 96
     },
     {
      "hora": "2026-11-03T05:00",
-     "probabilidad": 85
+     "probabilidad": 87
     },
     {
      "hora": "2026-11-03T06:00",
-     "probabilidad": 56
+     "probabilidad": 59
     },
     {
      "hora": "2026-11-03T07:00",
-     "probabilidad": 22
+     "probabilidad": 24
     },
     {
      "hora": "2026-11-03T08:00",
-     "probabilidad": 19
+     "probabilidad": 16
     },
     {
      "hora": "2026-11-03T09:00",
-     "probabilidad": 8
+     "probabilidad": 7
     }
    ]
   }
