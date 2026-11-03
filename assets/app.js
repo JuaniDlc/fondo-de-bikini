@@ -49,6 +49,10 @@ function ponerAnchos(contenedor) {
   }
 }
 
+/** «0 %» sonaría a imposible: lo que se redondea a 0 se muestra como menos de 1 %. */
+const textoPct = (p) => (Math.round(p) < 1 ? 'Menos de 1 %' : `${Math.round(p)} %`);
+const textoPctCorto = (p) => (Math.round(p) < 1 ? '&lt;1 %' : `${Math.round(p)} %`);
+
 function frase(pct) {
   if (pct < 20) return 'Sin lluvia esperada';
   if (pct < 40) return 'Poco probable';
@@ -117,7 +121,8 @@ function dibujar() {
   const inicio = actual.horaLluvia ? actual.hora : sumarHoras(actual.hora, -1);
   const fin = actual.horaLluvia ?? actual.hora;
   $('etiqueta').textContent = `Lluvia de ${horaCorta(inicio)} a ${horaCorta(fin)}`;
-  $('prob').textContent = `${pHora} %`;
+  $('prob').textContent = textoPct(pHora);
+  $('prob').classList.toggle('bajo', pHora < 1);
   // El color se calcula en la hoja de estilos: sube de a poco con la probabilidad, sin saltos.
   $('tarjeta-principal').style.setProperty('--p', actual.lloviendo ? 100 : pHora);
   $('frase').textContent = actual.lloviendo ? 'Está lloviendo en el aeropuerto' : frase(pHora);
@@ -187,7 +192,7 @@ function dibujarHoras() {
   if (!filas.length) return;
   $('horas-filas').innerHTML = filas.map(({ hora, probabilidad: p }) => {
     const barra = (v, clase) => (v === undefined ? '—'
-      : `<span class="celda"><span class="barra ${clase}"><span data-ancho="${Math.round(v)}"></span></span><b>${Math.round(v)} %</b></span>`);
+      : `<span class="celda"><span class="barra ${clase}"><span data-ancho="${Math.round(v)}"></span></span><b>${textoPctCorto(v)}</b></span>`);
     const h = (local) => Number(local.slice(11, 13));
     return `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
       + `<td>${barra(p, 'hora')}</td></tr>`;
@@ -216,7 +221,7 @@ function dibujarLugares() {
   const valor = (l, hora) => (l.nombre === 'Aeropuerto' ? propias.get(hora) : undefined)
     ?? l.horas.find((x) => x.hora === hora)?.probabilidad;
   const celda = (p) => (p === undefined ? '<td>—</td>'
-    : `<td><b>${p} %</b><span class="barra hora"><span data-ancho="${p}"></span></span></td>`);
+    : `<td><b>${textoPctCorto(p)}</b><span class="barra hora"><span data-ancho="${p}"></span></span></td>`);
   $('lugares-cabecera').innerHTML = '<th scope="col">Hora</th>'
     + lugares.map((l) => `<th scope="col">${escapar(l.nombre)}</th>`).join('');
   $('lugares-filas').innerHTML = horas.map((hora) => `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
@@ -319,8 +324,8 @@ function dibujarGrafica(real, proy, tend) {
   partes.push(`<circle class="ahora" cx="${x(0)}" cy="${y(ahora.y)}" r="5"/>`);
   partes.push(`<g id="hover" visibility="hidden"><line class="cruz" y1="${M.arr}" y2="${ALTO - M.aba}"/><circle class="marca" r="4"/></g>`);
 
-  const resumen = `Probabilidad de lluvia por hora: ahora ${Math.round(ahora.y)} %` +
-    (proy.length ? `, en ${FUTURO_H} horas ${Math.round(proy[proy.length - 1].y)} %` : '');
+  const resumen = `Probabilidad de lluvia por hora: ahora ${textoPct(ahora.y)}` +
+    (proy.length ? `, en ${FUTURO_H} horas ${textoPct(proy[proy.length - 1].y)}` : '');
   cont.innerHTML =
     `<svg viewBox="0 0 ${ancho} ${ALTO}" width="${ancho}" height="${ALTO}" role="img" aria-label="${resumen}">${partes.join('')}</svg>` +
     '<div class="globo" hidden></div>';
@@ -347,7 +352,7 @@ function activarHover(cont, puntos, x, y, ancho) {
     marca.setAttribute('cy', y(cercano.y));
     grupo.setAttribute('visibility', 'visible');
     const etiqueta = cercano.t === 0 ? 'ahora' : cercano.proyectado ? 'pronóstico' : '';
-    globo.innerHTML = `${horaCorta(cercano.hora)}${etiqueta ? ` · ${etiqueta}` : ''}<br><b>${Math.round(cercano.y)} %</b>`;
+    globo.innerHTML = `${horaCorta(cercano.hora)}${etiqueta ? ` · ${etiqueta}` : ''}<br><b>${textoPctCorto(cercano.y)}</b>`;
     globo.hidden = false;
     const izq = (cx / ancho) * r.width;
     const anchoGlobo = globo.offsetWidth;

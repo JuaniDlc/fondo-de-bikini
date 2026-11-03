@@ -108,6 +108,26 @@ try {
   assert.equal(vista.error, true, 'sin el servicio del clima, la página debe avisarlo');
   assert.deepEqual(vista.lugares.map((f) => f[0]), vista.proximas, 'dos números distintos para el aeropuerto');
   assert.ok(vista.lugares.length && vista.lugares.every((f) => f[1] === '77 %'), 'los demás lugares deben seguir igual');
+
+  // Lo que se redondea a 0 no debe decir «0 %».
+  const baja = await contexto.newPage();
+  await baja.route(/open-meteo\.com/, (ruta) => ruta.abort());
+  await baja.route(/data\/actual\.json/, (ruta) => ruta.fulfill({
+    json: { ...guardada, generado: new Date().toISOString(), probabilidad: 0.3, lloviendo: null, proyeccion: guardada.proyeccion.map((f) => ({ ...f, probabilidad: 0.2 })) },
+  }));
+  await baja.goto(url);
+  await baja.waitForFunction(() => document.getElementById('prob').textContent !== '—');
+  const textos = await baja.evaluate(() => ({
+    grande: document.getElementById('prob').textContent,
+    filas: [...document.querySelectorAll('#horas-filas b')].map((b) => b.textContent),
+    desbordada: document.documentElement.scrollWidth > window.innerWidth,
+    grafica: document.querySelector('#grafica svg').getAttribute('aria-label'),
+  }));
+  assert.equal(textos.grande, 'Menos de 1 %');
+  assert.ok(textos.filas.length && textos.filas.every((t) => t === '<1 %'), `tabla: ${textos.filas}`);
+  assert.equal(textos.desbordada, false, 'el texto largo no debe desbordar la página');
+  assert.equal(/0 %/.test(textos.grafica), false, 'la gráfica no debe decir 0 %');
+
   console.log(`La página funciona: ${vista.barras.length} barras, gráfica dibujada, sin errores.`);
 } finally {
   await navegador.close();
