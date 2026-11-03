@@ -1,7 +1,7 @@
 {
- "generado": "2026-11-03T17:30:24Z",
+ "generado": "2026-11-03T17:40:24Z",
  "minutos": 10,
- "archivos": 28,
+ "archivos": 27,
  "radio_km": 60,
  "rayos": 0,
  "rayos_cerca": 0,
@@ -9,7 +9,7 @@
  "rumbo": null,
  "puntos": [],
  "modelo": {
-  "hasta": "2026-11-03T12:30",
+  "hasta": "2026-11-03T12:40",
   "version": "todos-20s",
   "rayos_15_1h": 0.0,
   "rayos_30_1h": 0.0,
