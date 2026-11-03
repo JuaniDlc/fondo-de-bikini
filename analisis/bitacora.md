@@ -17,6 +17,8 @@ Cada prueba de una mejora del modelo se anota aquí, haya funcionado o no, para 
 
 | Fecha | Mejora | Resultado | Estado | Commit | Detalle |
 |---|---|---|---|---|---|
+| 2026-11-03 | Que los rayos no bajen de más: rayos solo suman, 20 minutos suavizados y no baja tanto | De −0,23 a +0,19 %; no cumple la regla en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-que-los-rayos-no-bajen-de-más) |
+| 2026-11-03 | Dirección de la tormenta: posición, sectores y movimiento de los rayos | De −0,97 a +0,20 %; casi siempre empeora y no cumple en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-dirección-de-la-tormenta) |
 | 2026-11-03 | Avance de los rayos y llegada de la nube fría, en 1 a 3 horas | De −0,33 a +0,61 %; no cumple la regla en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-avance-de-los-rayos-y-nube-fría) |
 | 2026-11-02 | Dos modelos, con y sin tormenta eléctrica, y un tercero que decide o pesa | Peor que un solo modelo con las mismas variables en todos los pronósticos: de −0,5 a −3,2 %; tomar el porcentaje mayor, de −16 a −65 %. No cumple en ninguno | No subida | solo la prueba, sin commit | [abajo](#2026-11-02-dos-modelos-con-y-sin-tormenta) |
 | 2026-11-02 | Nubes bajas de GOES (canales 3, 7, 13 y 15) | Solas cumplen la regla a 2 h (+2,12 %) y 3 h (+1,58 %); con señales y tibias, +3,76 % y +2,82 %. En las demás, no. En inicios sin rayos, cambia poco | En producción a 2 y 3 h | `8d39711` | [abajo](#2026-11-02-nubes-bajas-de-goes) |
@@ -50,9 +52,79 @@ Cada prueba de una mejora del modelo se anota aquí, haya funcionado o no, para 
 
 Ideas sin probar, de [observaciones.md](observaciones.md):
 
-- Forzar que los rayos cercanos solo puedan subir la probabilidad. El 1 de noviembre a las 18:10, más rayos la bajaron de 62 a 50 %.
-- Suavizar las variables de rayos de 20 minutos. El mismo día, a las 16:10, un rayo que salió de la ventana bajó la hora de 49 a 21 %.
 - Un objetivo aparte para lluvia fuerte: el modelo dice si llueve, no cuánto.
+
+## 2026-11-03: que los rayos no bajen de más
+
+**Pregunta:** ¿mejora el modelo si los rayos no pueden bajar tanto la probabilidad cuando hay una tormenta cerca?
+
+**Por qué:** la madrugada del 3 de noviembre, la hora 02-03 bajó de 63 a 31 % mientras los rayos disminuían, y llovió. El 1 de noviembre pasó algo parecido a las 18:10 y a las 16:10 ([observaciones.md](observaciones.md)).
+
+**Regla, fijada antes de ver resultados:** mejora de al menos 0,5 %, intervalo de 99 % sin el cero, mejora en al menos 6 de 8 trimestres y mejora en las horas secas con rayos a menos de 60 km.
+
+| Pronóstico | Rayos solo suman | 20 minutos suavizados | No baja tanto | ¿Cumple alguna? |
+|---|---|---|---|---|
+| Hora en curso | −0,13 % | +0,00 % | +0,09 % | no |
+| 2 h | −0,04 % | +0,05 % | −0,13 % | no |
+| 3 h | −0,08 % | −0,01 % | −0,23 % | no |
+| 4 h | +0,19 % | +0,00 % | −0,16 % | no |
+| 5 h | −0,03 % | −0,02 % | −0,07 % | no |
+
+**Horas que caen** (secas, 40 % o más al minuto 0 y que bajaron 10 puntos o más al minuto 50, en la página):
+
+| Pronóstico | Horas | Marcaba la página | Llovió | Con «no baja tanto» |
+|---|---|---|---|---|
+| Hora en curso | 20 | 33 % | 45 % | 45 % |
+| 2 h | 61 | 33 % | 34 % | 42 % |
+| 3 h | 78 | 38 % | 29 % | 46 % |
+| 4 h | 75 | 43 % | 36 % | 49 % |
+| 5 h | 11 | 46 % | 55 % | 52 % |
+
+**Lectura:**
+
+1. **No se adopta.** Ninguna versión cumple la regla. Prohibir que los rayos resten casi no cambia el resultado, y suavizarlos tampoco.
+2. **La caída no es un error general.** A 2, 3 y 4 h, en esas horas la página acertó o marcó de más, y «no baja tanto» empeora con más falsas alarmas. Lo que se vio en la madrugada no se repite en esas anticipaciones.
+3. **Queda una pista en la hora en curso:** en 20 horas, la página marcó 33 % y llovió el 45 %, y «no baja tanto» da +0,47 % en las horas secas con rayos, pero solo +0,09 % en total, con 55 falsas alarmas más. Son pocas horas para decidir.
+4. **El fondo del problema es otro:** el modelo no sabe si ya está lloviendo hasta el siguiente reporte. Eso no se arregla con estas variables, sino con un dato de lluvia más frecuente.
+
+**Límites:** «No baja tanto» es una regla fija, sin ajustar. Las horas que caen se eligieron con la página, así que parte de la diferencia puede ser regresión a la media.
+
+**Archivos:** [rayos_suaves.md](rayos_suaves.md) y `rayos_suaves.py`.
+
+## 2026-11-03: dirección de la tormenta
+
+**Pregunta:** ¿mejora el modelo si sabe de qué lado están los rayos y hacia dónde se mueven?
+
+**Regla, fijada antes de ver resultados:** la misma del avance de los rayos: mejora de al menos 0,5 %, intervalo de 99 % sin el cero, mejora en al menos 6 de 8 trimestres y mejora en las horas secas con el rayo más cercano a 30-60 km.
+
+**Datos:** `rayos_direccion_historial.py` volvió a leer los archivos de 46 meses. Coincide con el historial anterior en todos los bloques comunes menos uno.
+
+**Variables agregadas:**
+
+- **Posición y sectores:** el centro de los rayos de la última hora a menos de 150 km, y cuántos hubo en cada uno de los 8 sectores a menos de 60 km.
+- **Movimiento:** cuánto se movió ese centro frente a 1 y 2 horas antes, cuánto apunta hacia Guayaquil y qué fracción de la distancia avanzó.
+
+| Pronóstico | Posición y sectores | Movimiento | Todo | ¿Cumple alguna? |
+|---|---|---|---|---|
+| Hora en curso | −0,22 % | −0,38 % | −0,52 % | no |
+| 2 h | −0,19 % | −0,51 % | −0,71 % | no |
+| 3 h | −0,50 % | −0,54 % | −0,97 % | no |
+| 4 h | −0,54 % | −0,06 % | −0,49 % | no |
+| 5 h | −0,44 % | +0,20 % | −0,28 % | no |
+
+**Lectura:**
+
+1. **No se adopta.** De 15 comparaciones, solo una mejora (+0,20 %), y no llega a la regla. A 2 y 3 h, el movimiento empeora con un intervalo que no incluye el cero.
+2. **Tampoco ayuda en la franja de 30-60 km.** Con todo junto queda entre −0,82 y −3,29 %. En la hora en curso detecta algo más (de 19 a 24 %), con más falsas alarmas (de 81 a 110 predicciones).
+3. **Junto con la prueba anterior, cierra esta línea.** Ni el avance ni la dirección de los rayos ayudaron a predecir lluvia en el aeropuerto.
+
+**Límites:**
+
+- El centro de los rayos es una medida simple: si hay dos tormentas, queda entre ellas.
+- El modelo es una regresión logística y no combina bien lado y movimiento.
+- Solo se probó la lluvia en el aeropuerto, no la llegada de la tormenta a otros lugares.
+
+**Archivos:** [direccion.md](direccion.md), `direccion.py` y `rayos_direccion_historial.py`.
 
 ## 2026-11-03: avance de los rayos y nube fría
 
