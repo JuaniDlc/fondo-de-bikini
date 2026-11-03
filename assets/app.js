@@ -39,6 +39,11 @@ const fmtDia = new Intl.DateTimeFormat('es-EC', { timeZone: ZONA, weekday: 'shor
 const horaCorta = (local) => local.slice(11, 16);
 const fmtDiaCorto = new Intl.DateTimeFormat('es-EC', { timeZone: ZONA, weekday: 'short', day: 'numeric' });
 
+/** La CSP no deja usar estilos en línea en el HTML: el ancho de las barras se pone desde aquí. */
+function ponerAnchos(contenedor) {
+  for (const b of contenedor.querySelectorAll('[data-ancho]')) b.style.width = `${b.dataset.ancho}%`;
+}
+
 function frase(pct) {
   if (pct < 20) return 'Sin lluvia esperada';
   if (pct < 40) return 'Poco probable';
@@ -174,11 +179,12 @@ function dibujarHoras() {
   if (!filas.length) return;
   $('horas-filas').innerHTML = filas.map(({ hora, probabilidad: p }) => {
     const barra = (v, clase) => (v === undefined ? '—'
-      : `<span class="celda"><span class="barra ${clase}"><span style="width:${Math.round(v)}%"></span></span><b>${Math.round(v)} %</b></span>`);
+      : `<span class="celda"><span class="barra ${clase}"><span data-ancho="${Math.round(v)}"></span></span><b>${Math.round(v)} %</b></span>`);
     const h = (local) => Number(local.slice(11, 13));
     return `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
       + `<td>${barra(p, 'hora')}</td></tr>`;
   }).join('');
+  ponerAnchos($('horas-filas'));
 }
 
 const VIGENCIA_LUGARES_MIN = 75; // lugares.json se reescribe al menos cada hora
@@ -198,11 +204,12 @@ function dibujarLugares() {
   if ($('lugares').hidden) return;
   const h = (local) => Number(local.slice(11, 13));
   const celda = (p) => (p === undefined ? '<td>—</td>'
-    : `<td><b>${p} %</b><span class="barra hora"><span style="width:${p}%"></span></span></td>`);
+    : `<td><b>${p} %</b><span class="barra hora"><span data-ancho="${p}"></span></span></td>`);
   $('lugares-cabecera').innerHTML = '<th scope="col">Hora</th>'
     + lugares.map((l) => `<th scope="col">${escapar(l.nombre)}</th>`).join('');
   $('lugares-filas').innerHTML = horas.map((hora) => `<tr><th scope="row">${h(sumarHoras(hora, -1))}–${h(hora)} h</th>`
     + lugares.map((l) => celda(l.horas.find((x) => x.hora === hora)?.probabilidad)).join('') + '</tr>').join('');
+  ponerAnchos($('lugares-filas'));
   $('lugares-nota').textContent = `Con los rayos y las nubes de tormenta medidos desde cada lugar. Calculado a las ${fmtHora.format(new Date(datos.generado))}.`;
 }
 
@@ -251,7 +258,7 @@ function dibujarGrafica(real, proy, tend) {
     partes.push(`<text class="dia-texto" x="${xm + 5}" y="${M.arr + 12}" text-anchor="start">${dia(t)}</text>`);
   }
   partes.push(`<line class="linea-ahora" x1="${x(0)}" x2="${x(0)}" y1="${M.arr}" y2="${ALTO - M.aba}"/>`);
-  partes.push(`<text x="${x(0)}" y="${M.arr - 6}" text-anchor="middle" style="fill:var(--texto-2);font-weight:600">Ahora</text>`);
+  partes.push(`<text x="${x(0)}" y="${M.arr - 6}" text-anchor="middle" class="ahora">Ahora</text>`);
 
   partes.push(`<clipPath id="area"><rect x="${M.izq}" y="${M.arr}" width="${ancho - M.izq - M.der}" height="${ALTO - M.arr - M.aba}"/></clipPath>`);
 

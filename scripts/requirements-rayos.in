@@ -1,0 +1,5 @@
+# Lo que usan los scripts de Python. requirements-rayos.txt sale de aquí, con versiones y hashes fijos:
+# uv pip compile scripts/requirements-rayos.in --generate-hashes --python-version 3.13 --python-platform linux --no-header -o scripts/requirements-rayos.txt
+h5py
+numpy
+requests

@@ -140,6 +140,7 @@ button:focus-visible { outline: 3px solid var(--tendencia); outline-offset: 2px;
 .lienzo .proyeccion { stroke: var(--serie); stroke-dasharray: 5 4; }
 .lienzo .tendencia { stroke: var(--tendencia); }
 .lienzo .ahora { fill: var(--serie); stroke: var(--superficie); stroke-width: 2; }
+.lienzo .ahora { fill: var(--texto-2); font-weight: 600; }
 .lienzo .cruz { stroke: var(--tenue); stroke-width: 1; }
 .lienzo .marca { fill: var(--superficie); stroke: var(--serie); stroke-width: 2; }
 
