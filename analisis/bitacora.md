@@ -17,6 +17,9 @@ Cada prueba de una mejora del modelo se anota aquí, haya funcionado o no, para 
 
 | Fecha | Mejora | Resultado | Estado | Commit | Detalle |
 |---|---|---|---|---|---|
+| 2026-11-03 | Humedad, prueba fina: cada ventana por separado, punto de rocío y temporada | De −0,59 a +0,29 %; 0 de 72 comparaciones cumplen la regla | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-humedad-prueba-fina) |
+| 2026-11-03 | Ráfagas del aeropuerto y cambios de presión en 1, 6, 12 y 24 h | De −1,32 a +0,30 %; no cumple la regla en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-ráfagas-y-cambios-de-presión) |
+| 2026-11-03 | Promedios móviles de humedad de 3, 6, 12 y 24 h, de GFS y del aeropuerto | De −0,39 a +0,30 %; no cumple la regla en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-promedios-móviles-de-humedad) |
 | 2026-11-03 | Que los rayos no bajen de más: rayos solo suman, 20 minutos suavizados y no baja tanto | De −0,23 a +0,19 %; no cumple la regla en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-que-los-rayos-no-bajen-de-más) |
 | 2026-11-03 | Dirección de la tormenta: posición, sectores y movimiento de los rayos | De −0,97 a +0,20 %; casi siempre empeora y no cumple en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-dirección-de-la-tormenta) |
 | 2026-11-03 | Avance de los rayos y llegada de la nube fría, en 1 a 3 horas | De −0,33 a +0,61 %; no cumple la regla en ningún pronóstico | No subida | solo la prueba, sin commit | [abajo](#2026-11-03-avance-de-los-rayos-y-nube-fría) |
@@ -53,6 +56,86 @@ Cada prueba de una mejora del modelo se anota aquí, haya funcionado o no, para 
 Ideas sin probar, de [observaciones.md](observaciones.md):
 
 - Un objetivo aparte para lluvia fuerte: el modelo dice si llueve, no cuánto.
+
+## 2026-11-03: humedad, prueba fina
+
+**Pregunta:** ¿ayuda alguna ventana sola, el punto de rocío o una temporada, aunque juntas no hayan ayudado?
+
+**Regla, fijada antes de ver resultados:** mejora de al menos 0,5 %, intervalo de 99,9 % sin el cero y mejora en al menos 6 de 8 trimestres. Es más estricta porque son 72 comparaciones. Una mejora solo en la temporada lluviosa no basta para adoptar.
+
+**Método:** humedad relativa de GFS, punto de rocío de GFS y temperatura menos punto de rocío del aeropuerto, con ventanas de 3, 6, 12 y 24 horas, de 1 a 6 horas de anticipación. Cada ventana agrega solo el promedio y la diferencia con ese promedio.
+
+**Las mejores:**
+
+| Pronóstico | Fuente | Ventana | Mejora | Intervalo de 99,9 % | Trimestres | Lluviosa | Seca |
+|---|---|---|---|---|---|---|---|
+| 4 h | Aeropuerto | 24 h | +0,29 % | [−0,64; +1,34] | 5/8 | +0,31 % | +0,21 % |
+| 5 h | Aeropuerto | 24 h | +0,29 % | [−0,87; +1,56] | 4/8 | +0,45 % | −0,17 % |
+| 3 h | Humedad relativa de GFS | 12 h | +0,21 % | [−0,76; +1,09] | 6/8 | +0,28 % | +0,01 % |
+
+**Lectura:**
+
+1. **No se adopta.** Ninguna de las 72 llega a +0,5 %, y todos los intervalos incluyen el cero. Solo 21 mejoran algo.
+2. **Tampoco hay señal por temporada:** la mejor en la temporada lluviosa da +0,45 %.
+3. **El punto de rocío de GFS es la fuente más floja:** en promedio, −0,26 %. Ninguna ventana destaca.
+4. **Con esto se cierra esta línea.** Los promedios de humedad no agregan a lo que el modelo ya sabe, juntos ni por separado.
+
+**Límites:** solo humedad cerca del suelo; no se probó humedad en altura ni si viene del mar. La regresión logística no detecta bien combinaciones entre variables.
+
+**Archivos:** [humedad_fina.md](humedad_fina.md) y `humedad_fina.py`.
+
+## 2026-11-03: ráfagas y cambios de presión
+
+**Pregunta:** ¿mejora el modelo con las ráfagas del reporte y con cambios de presión en otros plazos?
+
+**Regla, fijada antes de ver resultados:** mejora de al menos 0,5 %, intervalo de 99 % sin el cero y mejora en al menos 6 de 8 trimestres.
+
+**Variables agregadas:**
+
+- **Ráfagas:** si hubo en la última hora y en las últimas 3, la mayor en nudos y la velocidad media del viento.
+- **Presión:** cambio en 1, 6, 12 y 24 horas, y diferencia con el promedio de esa misma hora en los 7 días anteriores.
+
+| Pronóstico | Ráfagas | Presión | Ambas | ¿Cumple alguna? |
+|---|---|---|---|---|
+| Hora en curso | −0,08 % | −0,19 % | −0,23 % | no |
+| 2 h | −0,08 % | −0,09 % | −0,25 % | no |
+| 3 h | −0,25 % | −0,43 % | −0,74 % | no |
+| 4 h | +0,30 % | −0,59 % | −0,29 % | no |
+| 5 h | +0,23 % | −0,45 % | −0,26 % | no |
+| 6 h | −0,65 % | −0,51 % | −1,32 % | no |
+
+**Lectura:**
+
+1. **No se adopta.** Ninguna variante cumple la regla, y todos los intervalos incluyen el cero.
+2. **Las ráfagas casi no aparecen en los reportes:** en el 0,04 % de las horas. Con tan pocos casos no se puede esperar señal.
+3. **La presión tampoco aporta,** ni siquiera con los cambios que quitan el ciclo diario.
+
+**Archivos:** [rafagas_presion.md](rafagas_presion.md) y `rafagas_presion.py`.
+
+## 2026-11-03: promedios móviles de humedad
+
+**Pregunta:** ¿mejora el modelo si sabe que el aire lleva horas cargándose de humedad?
+
+**Regla, fijada antes de ver resultados:** mejora de al menos 0,5 %, intervalo de 99 % sin el cero y mejora en al menos 6 de 8 trimestres.
+
+**Variables agregadas:** promedio de 3, 6, 12 y 24 horas, y diferencia entre ahora y cada promedio, de la humedad de GFS a 2 m y de la temperatura menos punto de rocío del aeropuerto. Cada promedio termina en la hora en que se pronostica.
+
+| Pronóstico | GFS | Aeropuerto | Ambas | ¿Cumple alguna? |
+|---|---|---|---|---|
+| Hora en curso | −0,13 % | −0,13 % | −0,25 % | no |
+| 2 h | +0,06 % | −0,36 % | −0,29 % | no |
+| 3 h | +0,11 % | −0,39 % | −0,21 % | no |
+| 4 h | +0,30 % | −0,14 % | +0,00 % | no |
+| 5 h | +0,02 % | −0,12 % | −0,10 % | no |
+| 6 h | +0,02 % | −0,13 % | +0,04 % | no |
+
+**Lectura:**
+
+1. **No se adopta.** Ninguna variante cumple la regla, y todos los intervalos incluyen el cero.
+2. **En los inicios de lluvia sin rayos empeora en todas las anticipaciones,** de −0,07 a −1,51 %, y la probabilidad típica casi no cambia. Era el caso donde más se esperaba que ayudara.
+3. **Posible explicación, sin medir:** en Guayaquil el aire suele estar húmedo, y los modelos del clima ya resumen esa información en su pronóstico.
+
+**Archivos:** [humedad_movil.md](humedad_movil.md) y `humedad_movil.py`.
 
 ## 2026-11-03: que los rayos no bajen de más
 
