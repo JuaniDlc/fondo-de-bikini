@@ -1,12 +1,12 @@
 {
- "generado": "2026-11-04T07:07:12.742Z",
+ "generado": "2026-11-04T07:10:20.946Z",
  "hora": "2026-11-04T02:00",
  "lluvia_ahora": 0,
  "lluvia_3h": 0,
  "reportes": 8,
  "senales": {
-  "vc": 0,
-  "vc_3h": 0,
+  "vc": 1,
+  "vc_3h": 1,
   "ts": 0,
   "cb": 0,
   "techo": 7.741099,
