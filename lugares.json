@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-04T15:00:37.995Z",
+ "generado": "2026-11-04T15:20:34.287Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,27 +7,27 @@
    "horas": [
     {
      "hora": "2026-11-04T11:00",
-     "probabilidad": 3
+     "probabilidad": 1
     },
     {
      "hora": "2026-11-04T12:00",
-     "probabilidad": 3
+     "probabilidad": 2
     },
     {
      "hora": "2026-11-04T13:00",
-     "probabilidad": 5
+     "probabilidad": 4
     },
     {
      "hora": "2026-11-04T14:00",
-     "probabilidad": 17
+     "probabilidad": 12
     },
     {
      "hora": "2026-11-04T15:00",
-     "probabilidad": 24
+     "probabilidad": 22
     },
     {
      "hora": "2026-11-04T16:00",
-     "probabilidad": 31
+     "probabilidad": 30
     }
    ]
   },
@@ -37,27 +37,27 @@
    "horas": [
     {
      "hora": "2026-11-04T11:00",
-     "probabilidad": 6
-    },
-    {
-     "hora": "2026-11-04T12:00",
      "probabilidad": 5
     },
     {
+     "hora": "2026-11-04T12:00",
+     "probabilidad": 3
+    },
+    {
      "hora": "2026-11-04T13:00",
-     "probabilidad": 8
+     "probabilidad": 6
     },
     {
      "hora": "2026-11-04T14:00",
-     "probabilidad": 17
+     "probabilidad": 12
     },
     {
      "hora": "2026-11-04T15:00",
-     "probabilidad": 24
+     "probabilidad": 22
     },
     {
      "hora": "2026-11-04T16:00",
-     "probabilidad": 31
+     "probabilidad": 30
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-04T11:00",
-     "probabilidad": 6
-    },
-    {
-     "hora": "2026-11-04T12:00",
      "probabilidad": 5
     },
     {
+     "hora": "2026-11-04T12:00",
+     "probabilidad": 4
+    },
+    {
      "hora": "2026-11-04T13:00",
-     "probabilidad": 8
+     "probabilidad": 7
     },
     {
      "hora": "2026-11-04T14:00",
-     "probabilidad": 17
+     "probabilidad": 14
     },
     {
      "hora": "2026-11-04T15:00",
-     "probabilidad": 24
+     "probabilidad": 22
     },
     {
      "hora": "2026-11-04T16:00",
-     "probabilidad": 31
+     "probabilidad": 30
     }
    ]
   }
