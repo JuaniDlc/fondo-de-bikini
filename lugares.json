@@ -1,25 +1,21 @@
 {
- "generado": "2026-11-03T23:50:33.575Z",
+ "generado": "2026-11-04T00:00:27.508Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-03T19:00",
-     "probabilidad": 1
-    },
-    {
      "hora": "2026-11-03T20:00",
      "probabilidad": 4
     },
     {
      "hora": "2026-11-03T21:00",
-     "probabilidad": 11
+     "probabilidad": 10
     },
     {
      "hora": "2026-11-03T22:00",
-     "probabilidad": 27
+     "probabilidad": 25
     },
     {
      "hora": "2026-11-03T23:00",
@@ -28,6 +24,10 @@
     {
      "hora": "2026-11-04T00:00",
      "probabilidad": 48
+    },
+    {
+     "hora": "2026-11-04T01:00",
+     "probabilidad": 54
     }
    ]
   },
@@ -36,20 +36,16 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-03T19:00",
-     "probabilidad": 5
-    },
-    {
      "hora": "2026-11-03T20:00",
-     "probabilidad": 11
+     "probabilidad": 10
     },
     {
      "hora": "2026-11-03T21:00",
-     "probabilidad": 19
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-03T22:00",
-     "probabilidad": 28
+     "probabilidad": 25
     },
     {
      "hora": "2026-11-03T23:00",
@@ -58,6 +54,10 @@
     {
      "hora": "2026-11-04T00:00",
      "probabilidad": 49
+    },
+    {
+     "hora": "2026-11-04T01:00",
+     "probabilidad": 54
     }
    ]
   },
@@ -66,28 +66,28 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-03T19:00",
-     "probabilidad": 5
-    },
-    {
      "hora": "2026-11-03T20:00",
-     "probabilidad": 11
+     "probabilidad": 10
     },
     {
      "hora": "2026-11-03T21:00",
-     "probabilidad": 19
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-03T22:00",
-     "probabilidad": 28
+     "probabilidad": 25
     },
     {
      "hora": "2026-11-03T23:00",
-     "probabilidad": 42
+     "probabilidad": 43
     },
     {
      "hora": "2026-11-04T00:00",
      "probabilidad": 49
+    },
+    {
+     "hora": "2026-11-04T01:00",
+     "probabilidad": 54
     }
    ]
   }
