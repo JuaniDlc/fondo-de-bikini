@@ -1,8 +1,8 @@
 name: Publicar página
 
-# Publica index.html y assets/ de main con los datos de la rama datos. Corre al cambiar la página y
-# cuando Rayos o Actualizar lectura guardan datos (un push con GITHUB_TOKEN no dispara otros workflows,
-# por eso lo llaman ellos).
+# Publica index.html y assets/ de main con una copia de los datos de la rama datos. Corre al cambiar la
+# página y cada hora, cuando Actualizar lectura guarda datos (un push con GITHUB_TOKEN no dispara otros
+# workflows, por eso lo llama él). La página lee los datos de la rama datos; esta copia es el respaldo.
 
 on:
   push:

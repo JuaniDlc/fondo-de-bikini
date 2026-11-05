@@ -231,19 +231,20 @@ function dibujarLugares() {
 /** Tarjetas de rayos (hasta 60 y hasta 25 km). */
 function dibujarRayos() {
   const r = resumenRayos(estado.radar);
-  $('rayos').hidden = !r;
-  $('rayos-ciudad').hidden = !r;
-  if (!r) return;
+  $('rayos').hidden = false;
+  $('rayos-ciudad').hidden = false;
   $('rayos-nivel').textContent = r.etiqueta;
-  $('rayos-nivel').className = `nivel nivel-${r.aislados ? 1 : r.nivel}`;
+  $('rayos-nivel').className = `nivel nivel-${r.aislados || r.sinDatos ? 1 : r.nivel}`;
   $('rayos-titulo').textContent = r.titulo;
   $('rayos-titulo').hidden = !r.titulo;
-  $('rayos-nota').textContent = `Satélite GOES, últimos 10 minutos, hace ${r.minutos} min. Medido desde el centro de Guayaquil.`;
+  $('rayos-nota').textContent = r.sinDatos
+    ? 'No se pudo leer el satélite en la última media hora. Medido desde el centro de Guayaquil.'
+    : `Satélite GOES, últimos 10 minutos, hace ${r.minutos} min. Medido desde el centro de Guayaquil.`;
   $('radar-region').innerHTML = svgRadar({ radioKm: 60, anillos: [CERCA_KM, 60], lugares: REGION, puntos: r.puntos, nivel: r.nivel });
   // Aquí solo cuentan los rayos de la zona: puede haber tormenta a 40 km y esta seguir tranquila.
   const enZona = r.nivel === 2 || (r.aislados && r.puntos[0]?.[0] <= CERCA_KM);
-  $('ciudad-nivel').textContent = enZona ? r.etiqueta : 'Sin tormenta eléctrica';
-  $('ciudad-nivel').className = `nivel nivel-${!enZona ? 0 : r.aislados ? 1 : 2}`;
+  $('ciudad-nivel').textContent = enZona || r.sinDatos ? r.etiqueta : 'Sin tormenta eléctrica';
+  $('ciudad-nivel').className = `nivel nivel-${r.sinDatos || r.aislados ? (enZona || r.sinDatos ? 1 : 0) : enZona ? 2 : 0}`;
   $('ciudad-titulo').textContent = enZona ? r.titulo : '';
   $('ciudad-titulo').hidden = !enZona;
   $('radar-ciudad').innerHTML = svgRadar({ radioKm: CERCA_KM, anillos: [10, CERCA_KM], lugares: CIUDAD, puntos: r.puntos, nivel: r.nivel });
@@ -452,7 +453,20 @@ function refrescarSiHaceFalta({ alAbrir = false } = {}) {
 
 // ---------- inicio ----------
 
+// Los datos se leen de la rama datos, que se actualiza cada 10 minutos. La copia publicada solo cambia
+// cada hora y GitHub Pages a veces tarda en entregarla: queda de respaldo.
+const DATOS_EN_VIVO = 'https://raw.githubusercontent.com/JuaniDlc/fondo-de-bikini/datos/';
+const ESPERA_DATOS_MS = 8000;
+
 async function leerJSON(ruta) {
+  try {
+    const r = await fetch(DATOS_EN_VIVO + ruta.replace('data/', ''), {
+      cache: 'no-cache', signal: AbortSignal.timeout(ESPERA_DATOS_MS),
+    });
+    if (r.ok) return await r.json();
+  } catch {
+    // Sigue con la copia publicada.
+  }
   const r = await fetch(ruta, { cache: 'no-cache' });
   if (!r.ok) throw new Error(`${ruta}: ${r.status}`);
   return r.json();

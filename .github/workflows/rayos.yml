@@ -16,8 +16,6 @@ jobs:
   rayos:
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    outputs:
-      guardado: ${{ steps.guardar.outputs.guardado }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
@@ -74,7 +72,6 @@ jobs:
       # Solo se guarda algo cuando cambia el estado de los avisos, el reporte del aeropuerto o los
       # rayos que usa el modelo (o empieza otra hora), para no hacer un commit cada 10 minutos.
       - name: Commit si cambió un aviso, el aeropuerto o los rayos
-        id: guardar
         working-directory: data
         env:
           GUARDAR_RAYOS: ${{ steps.rayos.outputs.guardar }}
@@ -89,14 +86,5 @@ jobs:
           for f in aeropuerto.json lugares.json infrarrojo.json; do if [ -f "$f" ]; then git add "$f"; fi; done
           git commit -m "Rayos y aeropuerto $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
           # Si otro workflow guardó los mismos archivos, gana esta versión (la más reciente).
-          for i in 1 2 3; do git pull --rebase -X theirs && git push && { echo "guardado=si" >> "$GITHUB_OUTPUT"; exit 0; }; git rebase --abort 2>/dev/null; sleep 5; done
+          for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; git rebase --abort 2>/dev/null || true; sleep 20; done
           exit 1
-
-  publicar:
-    needs: rayos
-    if: needs.rayos.outputs.guardado == 'si'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/publicar.yml

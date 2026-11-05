@@ -57,7 +57,7 @@ jobs:
           fi
           git commit -m "Lectura $(TZ=America/Guayaquil date '+%Y-%m-%d %H:%M')"
           # Si otro workflow guardó los mismos archivos, gana esta versión (la más reciente).
-          for i in 1 2 3; do git pull --rebase -X theirs && git push && { echo "guardado=si" >> "$GITHUB_OUTPUT"; exit 0; }; git rebase --abort 2>/dev/null; sleep 5; done
+          for i in 1 2 3; do git pull --rebase -X theirs && git push && { echo "guardado=si" >> "$GITHUB_OUTPUT"; exit 0; }; git rebase --abort 2>/dev/null || true; sleep 20; done
           exit 1
 
   publicar:

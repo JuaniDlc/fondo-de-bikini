@@ -30,9 +30,9 @@ tests/                      pruebas (node:test)
 
 ## Datos y publicación
 
-Los datos están en la rama `datos`, no en `main`, para que `main` solo tenga cambios de código. Los workflows la bajan en `data/`, guardan ahí y llaman a «Publicar página», que junta `index.html` y `assets/` de `main` con esos datos. En tu computadora, con `git worktree add data datos`, `data/` queda igual; `git -C data pull` la actualiza.
+Los datos están en la rama `datos`, no en `main`, para que `main` solo tenga cambios de código. Los workflows la bajan en `data/` y guardan ahí. La página lee los datos directo de esa rama en `raw.githubusercontent.com`. «Publicar página» junta `index.html` y `assets/` de `main` con una copia de los datos, cada hora y al cambiar el código; esa copia es el respaldo. En tu computadora, con `git worktree add data datos`, `data/` queda igual; `git -C data pull` la actualiza.
 
-Si cambia el código, «Publicar página» corre antes `node --test` y `tests/navegador.mjs`, que abre la página en Chrome. «Vigía de datos» revisa cada hora que los datos publicados estén al día; si no, falla y GitHub avisa por correo.
+Si cambia el código, «Publicar página» corre antes `node --test` y `tests/navegador.mjs`, que abre la página en Chrome. «Vigía de datos» revisa cada hora que los datos de esa rama y la copia publicada estén al día; si no, falla y GitHub avisa por correo.
 
 ## Tarjetas de rayos
 

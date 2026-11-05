@@ -28,8 +28,12 @@ test('sin rayos solo lo dice, y los datos viejos no se muestran', () => {
   const r = resumenRayos({ ...base, rayos: 0, mas_cercano_km: null, puntos: [] }, ahora);
   assert.equal(r.etiqueta, 'Sin tormenta eléctrica');
   assert.equal(r.titulo, '');
-  assert.equal(resumenRayos({ ...base, generado: '2026-11-02T19:00:00Z' }, ahora), null);
-  assert.equal(resumenRayos(null, ahora), null);
+  for (const viejo of [{ ...base, generado: '2026-11-02T19:00:00Z' }, null]) {
+    const s = resumenRayos(viejo, ahora);
+    assert.equal(s.sinDatos, true);
+    assert.equal(s.etiqueta, 'Sin datos recientes de rayos');
+    assert.deepEqual(s.puntos, []);
+  }
 });
 
 test('uno o dos rayos se muestran como aislados, no como «sin tormenta»', () => {

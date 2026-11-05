@@ -45,10 +45,12 @@ export function cercaDe(rumbo, km) {
   return distancia <= 15 ? mejor : null;
 }
 
-/** Qué dicen las tarjetas; null si los datos están viejos. */
+/** Qué dicen las tarjetas. Con datos viejos lo dicen, en vez de mostrar rayos que ya pasaron. */
 export function resumenRayos(r, ahora = Date.now()) {
   const minutos = r?.generado ? Math.round((ahora - Date.parse(r.generado)) / 60000) : Infinity;
-  if (minutos > VIGENCIA_MIN) return null;
+  if (minutos > VIGENCIA_MIN) {
+    return { sinDatos: true, nivel: 0, minutos: null, puntos: [], etiqueta: 'Sin datos recientes de rayos', titulo: '' };
+  }
   const nivel = nivelRayos(r);
   const puntos = (r.puntos ?? []).filter((p) => p.every(Number.isFinite));
   const base = { nivel, minutos: Math.max(minutos, 0), puntos };

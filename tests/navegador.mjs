@@ -39,6 +39,8 @@ try {
     if (r.status() >= 400 && r.url().startsWith(url)) faltantes.push(r.url().replace(url, ''));
   });
   await pagina.route(/open-meteo\.com/, (ruta) => ruta.abort());
+  // Sin la rama datos debe usar la copia publicada.
+  await contexto.route(/raw\.githubusercontent\.com/, (ruta) => ruta.abort());
   // Por lugar con un número imposible: el aeropuerto debe mostrar el de «Próximas horas», no este.
   const guardada = JSON.parse(await readFile(join(RAIZ, 'data/actual.json'), 'utf8'));
   const horas = [guardada.horaLluvia, ...guardada.proyeccion.map((f) => f.hora)].slice(0, 6)
@@ -127,6 +129,22 @@ try {
   assert.ok(textos.filas.length && textos.filas.every((t) => t === '<1 %'), `tabla: ${textos.filas}`);
   assert.equal(textos.desbordada, false, 'el texto largo no debe desbordar la página');
   assert.equal(/0 %/.test(textos.grafica), false, 'la gráfica no debe decir 0 %');
+
+  // La rama datos manda sobre la copia publicada, y con rayos viejos las tarjetas no desaparecen.
+  const vivo = await contexto.newPage();
+  await vivo.route(/open-meteo\.com/, (ruta) => ruta.abort());
+  await vivo.route(/raw\.githubusercontent\.com.*rayos\.json/, (ruta) => ruta.fulfill({
+    json: { generado: new Date().toISOString(), rayos: 2, mas_cercano_km: 12, rumbo: 'este', puntos: [[12, 90, 2]], modelo: null },
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  }));
+  await vivo.goto(url);
+  await vivo.waitForFunction(() => document.getElementById('rayos-nivel').textContent === 'Rayos aislados');
+  const viejo = await contexto.newPage();
+  await viejo.route(/open-meteo\.com/, (ruta) => ruta.abort());
+  await viejo.route(/data\/rayos\.json/, (ruta) => ruta.fulfill({ json: { generado: '2020-01-01T00:00:00Z', rayos: 9, mas_cercano_km: 5 } }));
+  await viejo.goto(url);
+  await viejo.waitForFunction(() => document.getElementById('rayos-nivel').textContent === 'Sin datos recientes de rayos');
+  assert.equal(await viejo.evaluate(() => document.getElementById('rayos-ciudad').hidden), false, 'la tarjeta de 25 km debe seguir visible');
 
   console.log(`La página funciona: ${vista.barras.length} barras, gráfica dibujada, sin errores.`);
 } finally {
