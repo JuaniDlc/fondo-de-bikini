@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-05T14:20:27.869Z",
+ "generado": "2026-11-05T14:40:43.656Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,7 +7,7 @@
    "horas": [
     {
      "hora": "2026-11-05T10:00",
-     "probabilidad": 11
+     "probabilidad": 14
     },
     {
      "hora": "2026-11-05T11:00",
@@ -49,7 +49,7 @@
     },
     {
      "hora": "2026-11-05T13:00",
-     "probabilidad": 9
+     "probabilidad": 8
     },
     {
      "hora": "2026-11-05T14:00",
