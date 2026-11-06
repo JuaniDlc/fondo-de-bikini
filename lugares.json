@@ -1,14 +1,10 @@
 {
- "generado": "2026-11-06T17:50:30.965Z",
+ "generado": "2026-11-06T18:00:51.376Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
-    {
-     "hora": "2026-11-06T13:00",
-     "probabilidad": 2
-    },
     {
      "hora": "2026-11-06T14:00",
      "probabilidad": 7
@@ -19,15 +15,19 @@
     },
     {
      "hora": "2026-11-06T16:00",
-     "probabilidad": 27
+     "probabilidad": 39
     },
     {
      "hora": "2026-11-06T17:00",
-     "probabilidad": 48
+     "probabilidad": 37
     },
     {
      "hora": "2026-11-06T18:00",
-     "probabilidad": 58
+     "probabilidad": 57
+    },
+    {
+     "hora": "2026-11-06T19:00",
+     "probabilidad": 56
     }
    ]
   },
@@ -36,28 +36,28 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-06T13:00",
-     "probabilidad": 1
-    },
-    {
      "hora": "2026-11-06T14:00",
-     "probabilidad": 5
+     "probabilidad": 3
     },
     {
      "hora": "2026-11-06T15:00",
-     "probabilidad": 10
+     "probabilidad": 7
     },
     {
      "hora": "2026-11-06T16:00",
-     "probabilidad": 28
+     "probabilidad": 23
     },
     {
      "hora": "2026-11-06T17:00",
-     "probabilidad": 51
+     "probabilidad": 39
     },
     {
      "hora": "2026-11-06T18:00",
      "probabilidad": 60
+    },
+    {
+     "hora": "2026-11-06T19:00",
+     "probabilidad": 59
     }
    ]
   },
@@ -66,28 +66,28 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-06T13:00",
-     "probabilidad": 1
-    },
-    {
      "hora": "2026-11-06T14:00",
-     "probabilidad": 5
+     "probabilidad": 3
     },
     {
      "hora": "2026-11-06T15:00",
-     "probabilidad": 11
+     "probabilidad": 10
     },
     {
      "hora": "2026-11-06T16:00",
-     "probabilidad": 32
+     "probabilidad": 26
     },
     {
      "hora": "2026-11-06T17:00",
-     "probabilidad": 52
+     "probabilidad": 42
     },
     {
      "hora": "2026-11-06T18:00",
      "probabilidad": 61
+    },
+    {
+     "hora": "2026-11-06T19:00",
+     "probabilidad": 60
     }
    ]
   }
