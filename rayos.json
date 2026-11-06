@@ -1,17 +1,32 @@
 {
- "generado": "2026-11-06T17:20:17Z",
+ "generado": "2026-11-06T17:27:19Z",
  "minutos": 10,
  "archivos": 29,
  "radio_km": 60,
- "rayos": 1,
+ "rayos": 6,
  "rayos_cerca": 0,
- "mas_cercano_km": 59.9,
+ "mas_cercano_km": 56.7,
  "rumbo": "oeste",
  "puntos": [
   [
-   60.1,
-   282,
+   56.9,
+   287,
    1
+  ],
+  [
+   59.1,
+   286,
+   1
+  ],
+  [
+   59.4,
+   278,
+   1
+  ],
+  [
+   59.7,
+   280,
+   3
   ]
  ],
  "modelo": {
