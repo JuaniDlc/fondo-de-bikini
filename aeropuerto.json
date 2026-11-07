@@ -1,9 +1,9 @@
 {
- "generado": "2026-11-07T00:07:10.054Z",
+ "generado": "2026-11-07T00:30:25.500Z",
  "hora": "2026-11-06T19:00",
  "lluvia_ahora": 0,
- "lluvia_3h": null,
- "reportes": 7,
+ "lluvia_3h": 0,
+ "reportes": 8,
  "senales": {
   "vc": 0,
   "vc_3h": 0,
