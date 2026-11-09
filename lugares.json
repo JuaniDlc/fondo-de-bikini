@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-09T12:10:25.389Z",
+ "generado": "2026-11-09T12:30:25.859Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,27 +7,27 @@
    "horas": [
     {
      "hora": "2026-11-09T08:00",
-     "probabilidad": 12
+     "probabilidad": 14
     },
     {
      "hora": "2026-11-09T09:00",
-     "probabilidad": 12
+     "probabilidad": 23
     },
     {
      "hora": "2026-11-09T10:00",
-     "probabilidad": 10
+     "probabilidad": 20
     },
     {
      "hora": "2026-11-09T11:00",
-     "probabilidad": 18
+     "probabilidad": 24
     },
     {
      "hora": "2026-11-09T12:00",
-     "probabilidad": 10
+     "probabilidad": 9
     },
     {
      "hora": "2026-11-09T13:00",
-     "probabilidad": 13
+     "probabilidad": 11
     }
    ]
   },
@@ -37,27 +37,27 @@
    "horas": [
     {
      "hora": "2026-11-09T08:00",
-     "probabilidad": 19
-    },
-    {
-     "hora": "2026-11-09T09:00",
      "probabilidad": 22
     },
     {
+     "hora": "2026-11-09T09:00",
+     "probabilidad": 42
+    },
+    {
      "hora": "2026-11-09T10:00",
-     "probabilidad": 27
+     "probabilidad": 47
     },
     {
      "hora": "2026-11-09T11:00",
-     "probabilidad": 17
+     "probabilidad": 23
     },
     {
      "hora": "2026-11-09T12:00",
-     "probabilidad": 10
+     "probabilidad": 9
     },
     {
      "hora": "2026-11-09T13:00",
-     "probabilidad": 14
+     "probabilidad": 11
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-09T08:00",
-     "probabilidad": 14
+     "probabilidad": 16
     },
     {
      "hora": "2026-11-09T09:00",
-     "probabilidad": 18
+     "probabilidad": 25
     },
     {
      "hora": "2026-11-09T10:00",
-     "probabilidad": 24
+     "probabilidad": 34
     },
     {
      "hora": "2026-11-09T11:00",
-     "probabilidad": 17
+     "probabilidad": 21
     },
     {
      "hora": "2026-11-09T12:00",
-     "probabilidad": 10
+     "probabilidad": 9
     },
     {
      "hora": "2026-11-09T13:00",
-     "probabilidad": 14
+     "probabilidad": 12
     }
    ]
   }
