@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-11T09:00:37.452Z",
+ "generado": "2026-11-11T09:20:21.756Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,27 +7,27 @@
    "horas": [
     {
      "hora": "2026-11-11T05:00",
-     "probabilidad": 26
+     "probabilidad": 23
     },
     {
      "hora": "2026-11-11T06:00",
-     "probabilidad": 18
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-11T07:00",
-     "probabilidad": 27
+     "probabilidad": 26
     },
     {
      "hora": "2026-11-11T08:00",
-     "probabilidad": 13
-    },
-    {
-     "hora": "2026-11-11T09:00",
      "probabilidad": 12
     },
     {
+     "hora": "2026-11-11T09:00",
+     "probabilidad": 10
+    },
+    {
      "hora": "2026-11-11T10:00",
-     "probabilidad": 8
+     "probabilidad": 7
     }
    ]
   },
@@ -41,23 +41,23 @@
     },
     {
      "hora": "2026-11-11T06:00",
-     "probabilidad": 16
+     "probabilidad": 13
     },
     {
      "hora": "2026-11-11T07:00",
-     "probabilidad": 20
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-11T08:00",
-     "probabilidad": 13
+     "probabilidad": 12
     },
     {
      "hora": "2026-11-11T09:00",
-     "probabilidad": 13
+     "probabilidad": 10
     },
     {
      "hora": "2026-11-11T10:00",
-     "probabilidad": 9
+     "probabilidad": 8
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-11T05:00",
-     "probabilidad": 16
-    },
-    {
-     "hora": "2026-11-11T06:00",
      "probabilidad": 14
     },
     {
-     "hora": "2026-11-11T07:00",
-     "probabilidad": 19
-    },
-    {
-     "hora": "2026-11-11T08:00",
+     "hora": "2026-11-11T06:00",
      "probabilidad": 13
     },
     {
-     "hora": "2026-11-11T09:00",
+     "hora": "2026-11-11T07:00",
+     "probabilidad": 17
+    },
+    {
+     "hora": "2026-11-11T08:00",
      "probabilidad": 12
     },
     {
+     "hora": "2026-11-11T09:00",
+     "probabilidad": 10
+    },
+    {
      "hora": "2026-11-11T10:00",
-     "probabilidad": 8
+     "probabilidad": 7
     }
    ]
   }
