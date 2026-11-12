@@ -1,6 +1,6 @@
 {
- "generado": "2026-11-12T19:30:49.611Z",
- "hora": "2026-11-12T14:00",
+ "generado": "2026-11-12T20:00:23.180Z",
+ "hora": "2026-11-12T15:00",
  "lluvia_ahora": 0,
  "lluvia_3h": 1,
  "reportes": 9,
@@ -13,10 +13,10 @@
   "base": 6.908755,
   "vis": 9.21034,
   "sp": 3,
-  "sp_cambio_3h": 1,
+  "sp_cambio_3h": 0,
   "pres_cambio_3h": -2,
-  "u_m": -3.830222,
-  "v_m": -3.213938,
+  "u_m": 3.75877,
+  "v_m": -1.368081,
   "tend_lluvia": 0
  },
  "lloviendo": null
