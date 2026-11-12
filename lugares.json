@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-12T22:30:45.143Z",
+ "generado": "2026-11-12T22:40:31.225Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,27 +7,27 @@
    "horas": [
     {
      "hora": "2026-11-12T18:00",
-     "probabilidad": 29
+     "probabilidad": 32
     },
     {
      "hora": "2026-11-12T19:00",
-     "probabilidad": 18
+     "probabilidad": 22
     },
     {
      "hora": "2026-11-12T20:00",
-     "probabilidad": 34
+     "probabilidad": 39
     },
     {
      "hora": "2026-11-12T21:00",
-     "probabilidad": 38
+     "probabilidad": 44
     },
     {
      "hora": "2026-11-12T22:00",
-     "probabilidad": 58
+     "probabilidad": 59
     },
     {
      "hora": "2026-11-12T23:00",
-     "probabilidad": 48
+     "probabilidad": 49
     }
    ]
   },
@@ -37,27 +37,27 @@
    "horas": [
     {
      "hora": "2026-11-12T18:00",
-     "probabilidad": 47
+     "probabilidad": 50
     },
     {
      "hora": "2026-11-12T19:00",
-     "probabilidad": 25
+     "probabilidad": 29
     },
     {
      "hora": "2026-11-12T20:00",
-     "probabilidad": 35
-    },
-    {
-     "hora": "2026-11-12T21:00",
      "probabilidad": 41
     },
     {
+     "hora": "2026-11-12T21:00",
+     "probabilidad": 49
+    },
+    {
      "hora": "2026-11-12T22:00",
-     "probabilidad": 58
+     "probabilidad": 59
     },
     {
      "hora": "2026-11-12T23:00",
-     "probabilidad": 48
+     "probabilidad": 49
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-12T18:00",
-     "probabilidad": 46
+     "probabilidad": 48
     },
     {
      "hora": "2026-11-12T19:00",
-     "probabilidad": 24
+     "probabilidad": 26
     },
     {
      "hora": "2026-11-12T20:00",
-     "probabilidad": 35
+     "probabilidad": 36
     },
     {
      "hora": "2026-11-12T21:00",
-     "probabilidad": 41
+     "probabilidad": 42
     },
     {
      "hora": "2026-11-12T22:00",
-     "probabilidad": 58
+     "probabilidad": 59
     },
     {
      "hora": "2026-11-12T23:00",
-     "probabilidad": 47
+     "probabilidad": 48
     }
    ]
   }
