@@ -1,12 +1,12 @@
 {
   "lluvia": {
-    "activa": false,
-    "enviado": "2026-11-13T05:50:26.013Z"
+    "activa": true,
+    "enviado": "2026-11-13T20:10:25.931Z"
   },
   "rayos": {
     "nivel": 1,
     "enviado": "2026-11-13T19:40:39.070Z",
     "avisada": true,
-    "ultimoRayo": "2026-11-13T20:00:22Z"
+    "ultimoRayo": "2026-11-13T20:10:17Z"
   }
 }
