@@ -1,25 +1,21 @@
 {
- "generado": "2026-11-14T21:50:21.893Z",
+ "generado": "2026-11-14T22:00:37.680Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-14T17:00",
-     "probabilidad": 49
-    },
-    {
      "hora": "2026-11-14T18:00",
-     "probabilidad": 60
+     "probabilidad": 59
     },
     {
      "hora": "2026-11-14T19:00",
-     "probabilidad": 66
+     "probabilidad": 68
     },
     {
      "hora": "2026-11-14T20:00",
-     "probabilidad": 76
+     "probabilidad": 73
     },
     {
      "hora": "2026-11-14T21:00",
@@ -28,6 +24,10 @@
     {
      "hora": "2026-11-14T22:00",
      "probabilidad": 74
+    },
+    {
+     "hora": "2026-11-14T23:00",
+     "probabilidad": 81
     }
    ]
   },
@@ -36,20 +36,16 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-14T17:00",
-     "probabilidad": 90
-    },
-    {
      "hora": "2026-11-14T18:00",
-     "probabilidad": 81
+     "probabilidad": 75
     },
     {
      "hora": "2026-11-14T19:00",
-     "probabilidad": 76
+     "probabilidad": 74
     },
     {
      "hora": "2026-11-14T20:00",
-     "probabilidad": 76
+     "probabilidad": 73
     },
     {
      "hora": "2026-11-14T21:00",
@@ -58,6 +54,10 @@
     {
      "hora": "2026-11-14T22:00",
      "probabilidad": 76
+    },
+    {
+     "hora": "2026-11-14T23:00",
+     "probabilidad": 82
     }
    ]
   },
@@ -66,20 +66,16 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-14T17:00",
-     "probabilidad": 71
-    },
-    {
      "hora": "2026-11-14T18:00",
-     "probabilidad": 79
+     "probabilidad": 73
     },
     {
      "hora": "2026-11-14T19:00",
-     "probabilidad": 78
+     "probabilidad": 75
     },
     {
      "hora": "2026-11-14T20:00",
-     "probabilidad": 75
+     "probabilidad": 72
     },
     {
      "hora": "2026-11-14T21:00",
@@ -88,6 +84,10 @@
     {
      "hora": "2026-11-14T22:00",
      "probabilidad": 74
+    },
+    {
+     "hora": "2026-11-14T23:00",
+     "probabilidad": 81
     }
    ]
   }
