@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-15T12:00:31.225Z",
+ "generado": "2026-11-15T12:10:24.606Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,15 +7,15 @@
    "horas": [
     {
      "hora": "2026-11-15T08:00",
-     "probabilidad": 12
+     "probabilidad": 6
     },
     {
      "hora": "2026-11-15T09:00",
-     "probabilidad": 20
+     "probabilidad": 9
     },
     {
      "hora": "2026-11-15T10:00",
-     "probabilidad": 20
+     "probabilidad": 12
     },
     {
      "hora": "2026-11-15T11:00",
@@ -23,11 +23,11 @@
     },
     {
      "hora": "2026-11-15T12:00",
-     "probabilidad": 23
+     "probabilidad": 20
     },
     {
      "hora": "2026-11-15T13:00",
-     "probabilidad": 14
+     "probabilidad": 15
     }
    ]
   },
@@ -37,27 +37,27 @@
    "horas": [
     {
      "hora": "2026-11-15T08:00",
-     "probabilidad": 16
+     "probabilidad": 5
     },
     {
      "hora": "2026-11-15T09:00",
-     "probabilidad": 20
+     "probabilidad": 11
     },
     {
      "hora": "2026-11-15T10:00",
-     "probabilidad": 19
+     "probabilidad": 14
     },
     {
      "hora": "2026-11-15T11:00",
-     "probabilidad": 22
-    },
-    {
-     "hora": "2026-11-15T12:00",
      "probabilidad": 23
     },
     {
+     "hora": "2026-11-15T12:00",
+     "probabilidad": 20
+    },
+    {
      "hora": "2026-11-15T13:00",
-     "probabilidad": 14
+     "probabilidad": 15
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-15T08:00",
-     "probabilidad": 18
+     "probabilidad": 7
     },
     {
      "hora": "2026-11-15T09:00",
-     "probabilidad": 22
+     "probabilidad": 13
     },
     {
      "hora": "2026-11-15T10:00",
-     "probabilidad": 20
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-15T11:00",
-     "probabilidad": 23
+     "probabilidad": 26
     },
     {
      "hora": "2026-11-15T12:00",
-     "probabilidad": 23
+     "probabilidad": 20
     },
     {
      "hora": "2026-11-15T13:00",
-     "probabilidad": 14
+     "probabilidad": 15
     }
    ]
   }
