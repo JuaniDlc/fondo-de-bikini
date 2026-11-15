@@ -1,33 +1,33 @@
 {
- "generado": "2026-11-15T15:00:24.599Z",
+ "generado": "2026-11-15T16:00:31.731Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-15T11:00",
-     "probabilidad": 3
-    },
-    {
      "hora": "2026-11-15T12:00",
-     "probabilidad": 3
+     "probabilidad": 2
     },
     {
      "hora": "2026-11-15T13:00",
-     "probabilidad": 3
+     "probabilidad": 2
     },
     {
      "hora": "2026-11-15T14:00",
-     "probabilidad": 11
+     "probabilidad": 5
     },
     {
      "hora": "2026-11-15T15:00",
-     "probabilidad": 8
+     "probabilidad": 9
     },
     {
      "hora": "2026-11-15T16:00",
      "probabilidad": 9
+    },
+    {
+     "hora": "2026-11-15T17:00",
+     "probabilidad": 10
     }
    ]
   },
@@ -36,10 +36,6 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-15T11:00",
-     "probabilidad": 6
-    },
-    {
      "hora": "2026-11-15T12:00",
      "probabilidad": 6
     },
@@ -49,15 +45,19 @@
     },
     {
      "hora": "2026-11-15T14:00",
-     "probabilidad": 11
+     "probabilidad": 10
     },
     {
      "hora": "2026-11-15T15:00",
-     "probabilidad": 8
+     "probabilidad": 10
     },
     {
      "hora": "2026-11-15T16:00",
      "probabilidad": 9
+    },
+    {
+     "hora": "2026-11-15T17:00",
+     "probabilidad": 10
     }
    ]
   },
@@ -66,28 +66,28 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-15T11:00",
-     "probabilidad": 6
-    },
-    {
      "hora": "2026-11-15T12:00",
-     "probabilidad": 6
+     "probabilidad": 5
     },
     {
      "hora": "2026-11-15T13:00",
-     "probabilidad": 7
+     "probabilidad": 5
     },
     {
      "hora": "2026-11-15T14:00",
-     "probabilidad": 11
+     "probabilidad": 9
     },
     {
      "hora": "2026-11-15T15:00",
-     "probabilidad": 8
+     "probabilidad": 10
     },
     {
      "hora": "2026-11-15T16:00",
      "probabilidad": 9
+    },
+    {
+     "hora": "2026-11-15T17:00",
+     "probabilidad": 10
     }
    ]
   }
