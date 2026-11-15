@@ -1,6 +1,6 @@
 {
- "generado": "2026-11-15T18:00:34.902Z",
- "hora": "2026-11-15T13:00",
+ "generado": "2026-11-15T19:07:08.515Z",
+ "hora": "2026-11-15T14:00",
  "lluvia_ahora": 0,
  "lluvia_3h": 0,
  "reportes": 8,
@@ -9,14 +9,14 @@
   "vc_3h": 0,
   "ts": 0,
   "cb": 0,
-  "techo": 9.21044,
+  "techo": 9.392745,
   "base": 7.741099,
   "vis": 9.21034,
-  "sp": 6,
+  "sp": 7,
   "sp_cambio_3h": 2,
   "pres_cambio_3h": -3,
-  "u_m": 0,
-  "v_m": 5,
+  "u_m": -4,
+  "v_m": 6.928203,
   "tend_lluvia": 0
  },
  "lloviendo": null
