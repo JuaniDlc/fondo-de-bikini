@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-16T19:30:29.896Z",
+ "generado": "2026-11-16T19:40:36.144Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,27 +7,27 @@
    "horas": [
     {
      "hora": "2026-11-16T15:00",
-     "probabilidad": 1
-    },
-    {
-     "hora": "2026-11-16T16:00",
      "probabilidad": 3
     },
     {
-     "hora": "2026-11-16T17:00",
+     "hora": "2026-11-16T16:00",
      "probabilidad": 9
+    },
+    {
+     "hora": "2026-11-16T17:00",
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-16T18:00",
-     "probabilidad": 8
+     "probabilidad": 13
     },
     {
      "hora": "2026-11-16T19:00",
-     "probabilidad": 8
+     "probabilidad": 12
     },
     {
      "hora": "2026-11-16T20:00",
-     "probabilidad": 9
+     "probabilidad": 13
     }
    ]
   },
@@ -37,27 +37,27 @@
    "horas": [
     {
      "hora": "2026-11-16T15:00",
-     "probabilidad": 1
+     "probabilidad": 3
     },
     {
      "hora": "2026-11-16T16:00",
-     "probabilidad": 2
+     "probabilidad": 7
     },
     {
      "hora": "2026-11-16T17:00",
-     "probabilidad": 5
+     "probabilidad": 13
     },
     {
      "hora": "2026-11-16T18:00",
-     "probabilidad": 8
+     "probabilidad": 14
     },
     {
      "hora": "2026-11-16T19:00",
-     "probabilidad": 8
+     "probabilidad": 13
     },
     {
      "hora": "2026-11-16T20:00",
-     "probabilidad": 9
+     "probabilidad": 14
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-16T15:00",
-     "probabilidad": 1
+     "probabilidad": 4
     },
     {
      "hora": "2026-11-16T16:00",
-     "probabilidad": 2
+     "probabilidad": 7
     },
     {
      "hora": "2026-11-16T17:00",
-     "probabilidad": 5
+     "probabilidad": 12
     },
     {
      "hora": "2026-11-16T18:00",
-     "probabilidad": 8
+     "probabilidad": 15
     },
     {
      "hora": "2026-11-16T19:00",
-     "probabilidad": 8
+     "probabilidad": 13
     },
     {
      "hora": "2026-11-16T20:00",
-     "probabilidad": 9
+     "probabilidad": 14
     }
    ]
   }
