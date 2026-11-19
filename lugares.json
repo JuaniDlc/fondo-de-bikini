@@ -1,33 +1,33 @@
 {
- "generado": "2026-11-19T18:40:18.841Z",
+ "generado": "2026-11-19T19:00:22.658Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-19T14:00",
-     "probabilidad": 1
-    },
-    {
      "hora": "2026-11-19T15:00",
      "probabilidad": 2
     },
     {
      "hora": "2026-11-19T16:00",
-     "probabilidad": 10
+     "probabilidad": 11
     },
     {
      "hora": "2026-11-19T17:00",
-     "probabilidad": 22
+     "probabilidad": 24
     },
     {
      "hora": "2026-11-19T18:00",
-     "probabilidad": 26
+     "probabilidad": 33
     },
     {
      "hora": "2026-11-19T19:00",
-     "probabilidad": 38
+     "probabilidad": 47
+    },
+    {
+     "hora": "2026-11-19T20:00",
+     "probabilidad": 58
     }
    ]
   },
@@ -36,10 +36,6 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-19T14:00",
-     "probabilidad": 3
-    },
-    {
      "hora": "2026-11-19T15:00",
      "probabilidad": 3
     },
@@ -49,15 +45,19 @@
     },
     {
      "hora": "2026-11-19T17:00",
-     "probabilidad": 24
+     "probabilidad": 23
     },
     {
      "hora": "2026-11-19T18:00",
-     "probabilidad": 26
+     "probabilidad": 33
     },
     {
      "hora": "2026-11-19T19:00",
-     "probabilidad": 38
+     "probabilidad": 46
+    },
+    {
+     "hora": "2026-11-19T20:00",
+     "probabilidad": 57
     }
    ]
   },
@@ -66,16 +66,12 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-19T14:00",
-     "probabilidad": 3
-    },
-    {
      "hora": "2026-11-19T15:00",
      "probabilidad": 3
     },
     {
      "hora": "2026-11-19T16:00",
-     "probabilidad": 14
+     "probabilidad": 16
     },
     {
      "hora": "2026-11-19T17:00",
@@ -83,11 +79,15 @@
     },
     {
      "hora": "2026-11-19T18:00",
-     "probabilidad": 26
+     "probabilidad": 34
     },
     {
      "hora": "2026-11-19T19:00",
-     "probabilidad": 38
+     "probabilidad": 47
+    },
+    {
+     "hora": "2026-11-19T20:00",
+     "probabilidad": 58
     }
    ]
   }
