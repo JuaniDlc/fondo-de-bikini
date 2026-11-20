@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-20T14:30:29.054Z",
+ "generado": "2026-11-20T14:40:25.570Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
@@ -7,27 +7,27 @@
    "horas": [
     {
      "hora": "2026-11-20T10:00",
-     "probabilidad": 42
+     "probabilidad": 51
     },
     {
      "hora": "2026-11-20T11:00",
-     "probabilidad": 37
+     "probabilidad": 29
     },
     {
      "hora": "2026-11-20T12:00",
-     "probabilidad": 16
+     "probabilidad": 11
     },
     {
      "hora": "2026-11-20T13:00",
-     "probabilidad": 33
+     "probabilidad": 28
     },
     {
      "hora": "2026-11-20T14:00",
-     "probabilidad": 20
+     "probabilidad": 18
     },
     {
      "hora": "2026-11-20T15:00",
-     "probabilidad": 28
+     "probabilidad": 24
     }
    ]
   },
@@ -37,27 +37,27 @@
    "horas": [
     {
      "hora": "2026-11-20T10:00",
-     "probabilidad": 33
+     "probabilidad": 42
     },
     {
      "hora": "2026-11-20T11:00",
-     "probabilidad": 48
+     "probabilidad": 42
     },
     {
      "hora": "2026-11-20T12:00",
-     "probabilidad": 29
+     "probabilidad": 23
     },
     {
      "hora": "2026-11-20T13:00",
-     "probabilidad": 35
+     "probabilidad": 30
     },
     {
      "hora": "2026-11-20T14:00",
-     "probabilidad": 20
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-20T15:00",
-     "probabilidad": 26
+     "probabilidad": 23
     }
    ]
   },
@@ -67,27 +67,27 @@
    "horas": [
     {
      "hora": "2026-11-20T10:00",
-     "probabilidad": 34
+     "probabilidad": 43
     },
     {
      "hora": "2026-11-20T11:00",
-     "probabilidad": 44
+     "probabilidad": 32
     },
     {
      "hora": "2026-11-20T12:00",
-     "probabilidad": 27
+     "probabilidad": 18
     },
     {
      "hora": "2026-11-20T13:00",
-     "probabilidad": 37
+     "probabilidad": 30
     },
     {
      "hora": "2026-11-20T14:00",
-     "probabilidad": 22
+     "probabilidad": 20
     },
     {
      "hora": "2026-11-20T15:00",
-     "probabilidad": 29
+     "probabilidad": 27
     }
    ]
   }
