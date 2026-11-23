@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-23T16:20:20Z",
+ "generado": "2026-11-23T16:30:40Z",
  "minutos": 10,
  "archivos": 28,
  "radio_km": 60,
@@ -9,7 +9,7 @@
  "rumbo": null,
  "puntos": [],
  "modelo": {
-  "hasta": "2026-11-23T11:20",
+  "hasta": "2026-11-23T11:30",
   "version": "todos-20s",
   "rayos_15_1h": 0.0,
   "rayos_30_1h": 0.0,
