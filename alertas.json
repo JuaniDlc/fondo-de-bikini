@@ -6,7 +6,7 @@
   "rayos": {
     "nivel": 0,
     "enviado": "2026-11-24T11:30:32.936Z",
-    "avisada": true,
+    "avisada": false,
     "ultimoRayo": "2026-11-24T11:30:20Z"
   }
 }
