@@ -1,33 +1,33 @@
 {
- "generado": "2026-11-26T13:50:34.293Z",
+ "generado": "2026-11-26T14:10:26.836Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-26T09:00",
-     "probabilidad": 1
-    },
-    {
      "hora": "2026-11-26T10:00",
-     "probabilidad": 1
+     "probabilidad": 0
     },
     {
      "hora": "2026-11-26T11:00",
-     "probabilidad": 5
+     "probabilidad": 2
     },
     {
      "hora": "2026-11-26T12:00",
-     "probabilidad": 20
+     "probabilidad": 5
     },
     {
      "hora": "2026-11-26T13:00",
-     "probabilidad": 25
+     "probabilidad": 21
     },
     {
      "hora": "2026-11-26T14:00",
-     "probabilidad": 40
+     "probabilidad": 39
+    },
+    {
+     "hora": "2026-11-26T15:00",
+     "probabilidad": 44
     }
    ]
   },
@@ -36,28 +36,28 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-26T09:00",
-     "probabilidad": 5
-    },
-    {
      "hora": "2026-11-26T10:00",
-     "probabilidad": 4
+     "probabilidad": 2
     },
     {
      "hora": "2026-11-26T11:00",
-     "probabilidad": 12
+     "probabilidad": 9
     },
     {
      "hora": "2026-11-26T12:00",
-     "probabilidad": 19
+     "probabilidad": 14
     },
     {
      "hora": "2026-11-26T13:00",
-     "probabilidad": 25
+     "probabilidad": 20
     },
     {
      "hora": "2026-11-26T14:00",
-     "probabilidad": 40
+     "probabilidad": 39
+    },
+    {
+     "hora": "2026-11-26T15:00",
+     "probabilidad": 44
     }
    ]
   },
@@ -66,28 +66,28 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-26T09:00",
-     "probabilidad": 6
-    },
-    {
      "hora": "2026-11-26T10:00",
-     "probabilidad": 4
+     "probabilidad": 2
     },
     {
      "hora": "2026-11-26T11:00",
-     "probabilidad": 11
+     "probabilidad": 9
     },
     {
      "hora": "2026-11-26T12:00",
-     "probabilidad": 18
+     "probabilidad": 15
     },
     {
      "hora": "2026-11-26T13:00",
-     "probabilidad": 27
+     "probabilidad": 20
     },
     {
      "hora": "2026-11-26T14:00",
-     "probabilidad": 42
+     "probabilidad": 40
+    },
+    {
+     "hora": "2026-11-26T15:00",
+     "probabilidad": 45
     }
    ]
   }
