@@ -1,25 +1,21 @@
 {
- "generado": "2026-11-27T18:50:42.078Z",
+ "generado": "2026-11-27T19:00:31.293Z",
  "lugares": [
   {
    "nombre": "Aeropuerto",
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-27T14:00",
-     "probabilidad": 8
-    },
-    {
      "hora": "2026-11-27T15:00",
-     "probabilidad": 26
+     "probabilidad": 23
     },
     {
      "hora": "2026-11-27T16:00",
-     "probabilidad": 38
+     "probabilidad": 36
     },
     {
      "hora": "2026-11-27T17:00",
-     "probabilidad": 49
+     "probabilidad": 52
     },
     {
      "hora": "2026-11-27T18:00",
@@ -28,6 +24,10 @@
     {
      "hora": "2026-11-27T19:00",
      "probabilidad": 62
+    },
+    {
+     "hora": "2026-11-27T20:00",
+     "probabilidad": 54
     }
    ]
   },
@@ -36,20 +36,16 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-27T14:00",
-     "probabilidad": 7
-    },
-    {
      "hora": "2026-11-27T15:00",
-     "probabilidad": 18
+     "probabilidad": 17
     },
     {
      "hora": "2026-11-27T16:00",
-     "probabilidad": 31
+     "probabilidad": 30
     },
     {
      "hora": "2026-11-27T17:00",
-     "probabilidad": 49
+     "probabilidad": 51
     },
     {
      "hora": "2026-11-27T18:00",
@@ -58,6 +54,10 @@
     {
      "hora": "2026-11-27T19:00",
      "probabilidad": 62
+    },
+    {
+     "hora": "2026-11-27T20:00",
+     "probabilidad": 54
     }
    ]
   },
@@ -66,28 +66,28 @@
    "usaRayos": true,
    "horas": [
     {
-     "hora": "2026-11-27T14:00",
-     "probabilidad": 7
-    },
-    {
      "hora": "2026-11-27T15:00",
      "probabilidad": 19
     },
     {
      "hora": "2026-11-27T16:00",
-     "probabilidad": 32
+     "probabilidad": 34
     },
     {
      "hora": "2026-11-27T17:00",
-     "probabilidad": 50
+     "probabilidad": 56
     },
     {
      "hora": "2026-11-27T18:00",
-     "probabilidad": 65
+     "probabilidad": 66
     },
     {
      "hora": "2026-11-27T19:00",
-     "probabilidad": 62
+     "probabilidad": 63
+    },
+    {
+     "hora": "2026-11-27T20:00",
+     "probabilidad": 55
     }
    ]
   }
