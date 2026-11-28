@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-28T18:00:22.197Z",
+ "generado": "2026-11-28T18:07:09.024Z",
  "hora": "2026-11-28T13:00",
  "lluvia_ahora": 0,
  "lluvia_3h": 0,
@@ -15,8 +15,8 @@
   "sp": 7,
   "sp_cambio_3h": 1,
   "pres_cambio_3h": -2,
-  "u_m": -2.819078,
-  "v_m": 1.02606,
+  "u_m": -3.213938,
+  "v_m": 3.830222,
   "tend_lluvia": 0
  },
  "lloviendo": null
